@@ -7,9 +7,10 @@ android {
         applicationId "com.timefreak7.inkmap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // CI passes the run number so every release can install over the previous one.
-        versionCode Integer.parseInt(System.getenv('VERSION_CODE') ?: '1')
-        versionName "0.1.${System.getenv('VERSION_CODE') ?: '0'}"
+        // Commit count, so each new build installs over the previous one (needs full git history, not a shallow clone).
+        def commits = 'git rev-list --count HEAD'.execute(null, rootDir).text.trim().toInteger()
+        versionCode commits
+        versionName "0.1.${commits}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,7 +18,7 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // The release key never lives in the repo; CI decodes it from the KEYSTORE_BASE64 secret.
+    // The release key never lives in the repo; scripts/build-apk.sh passes its path and password in.
     def keystoreFile = System.getenv('KEYSTORE_FILE')
     signingConfigs {
         release {

@@ -35,14 +35,19 @@ Continent rule: M49 region, with Northern America, Central America and the Carib
 
 ## Builds and releases
 
-`.github/workflows/build.yml` runs on every push: tests, web build, Android release APK, Windows NSIS installer.
-Pushes to `main` also create a GitHub release with the signed APK and the installer.
-The APK build fails if the APK declares the `INTERNET` permission or is over 80 MB.
+`.github/workflows/build.yml` runs on every push: tests, web build, an **unsigned** Android APK (build check only; fails if the APK
+declares the `INTERNET` permission or is over 80 MB) and the Windows NSIS installer (downloadable from the run's artifacts).
 
-### Android signing
+### Signed Android APK
 
-The release key is never in this repo. CI needs four repository secrets (Settings → Secrets and variables → Actions):
-`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. The same key must sign every release forever.
+The release key is never in this repo or in CI. Build the signed APK on a machine with the Android SDK and the keystore:
+
+```sh
+KEYSTORE_PASSWORD=... ANDROID_HOME=/path/to/sdk scripts/build-apk.sh /path/to/inkmap-release.jks
+# -> release/Inkmap-0.1.<commits>.apk
+```
+
+The version code is the commit count, so every new build installs over the previous one. The same key must sign every release forever.
 
 ### Web
 
