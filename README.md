@@ -61,8 +61,7 @@ Vercel deploys `main` (framework preset: Vite, output `dist`). A service worker 
 | Dexie | Apache-2.0 |
 | MapLibre GL JS | BSD-3-Clause |
 | topojson-client | ISC |
-| Capacitor (core, android, filesystem), Electron, electron-builder | MIT |
-| exifr | MIT |
+| Capacitor (core, android), Electron, electron-builder | MIT |
 | mapshaper (build-time only) | MPL-2.0 |
 | GeoNames data | CC BY 4.0 — © GeoNames, geonames.org |
 | Natural Earth data | Public domain |

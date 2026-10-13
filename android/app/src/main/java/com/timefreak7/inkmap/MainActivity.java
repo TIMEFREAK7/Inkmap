@@ -8,6 +8,8 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(PhotoScanPlugin.class);
+        registerPlugin(BackupFolderPlugin.class);
         super.onCreate(savedInstanceState);
         // Ask for the screen's fastest refresh rate; some phones otherwise hold WebView apps at 60 or 90 Hz.
         Display display = getWindowManager().getDefaultDisplay();

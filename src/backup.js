@@ -1,8 +1,8 @@
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { BackupFolder } from './native.js';
 
-export const BACKUP = 'Inkmap/inkmap-backup.inkbackup';
-export const PREV = 'Inkmap/inkmap-backup.prev.inkbackup';
-const TMP = 'Inkmap/inkmap-backup.tmp';
+export const BACKUP = 'inkmap-backup.inkbackup';
+export const PREV = 'inkmap-backup.prev.inkbackup';
+const TMP = 'inkmap-backup.tmp';
 
 // An interrupted write must never destroy the only good copy:
 // write the new data to a temp file, move the current backup to .prev, then move the temp file into place.
@@ -15,12 +15,11 @@ export async function writeBackup(fs, data) {
   await fs.rename(TMP, BACKUP);
 }
 
-// Public Documents folder on Android, so the backup survives uninstalling the app.
-const at = path => ({ path, directory: Directory.Documents });
-export const documentsFs = {
-  write: (path, data) => Filesystem.writeFile({ ...at(path), data, encoding: Encoding.UTF8, recursive: true }),
-  read: path => Filesystem.readFile({ ...at(path), encoding: Encoding.UTF8 }).then(r => r.data),
-  exists: path => Filesystem.stat(at(path)).then(() => true, () => false),
-  remove: path => Filesystem.deleteFile(at(path)),
-  rename: (from, to) => Filesystem.rename({ from, to, directory: Directory.Documents, toDirectory: Directory.Documents }),
+// The folder the person picked (Android). It stays usable after a reinstall once picked again.
+export const folderFs = {
+  write: (name, data) => BackupFolder.write({ name, data }),
+  read: name => BackupFolder.read({ name }).then(r => r.data),
+  exists: name => BackupFolder.exists({ name }).then(r => r.exists),
+  remove: name => BackupFolder.remove({ name }),
+  rename: (from, to) => BackupFolder.rename({ from, to }),
 };
