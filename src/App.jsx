@@ -3,11 +3,13 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import Globe from './Globe.jsx';
 import FpsMeter from './FpsMeter.jsx';
 import AddVisit from './AddVisit.jsx';
+import Onboarding from './Onboarding.jsx';
+import Settings from './Settings.jsx';
+import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
 import { db } from './db.js';
 import { makeVisit, stats } from './visits.js';
 
-const MY_COLOUR = '#f6ad3b'; // shortcut: fixed until the profile screen lets each person choose (Tier 1, first launch)
 const UNDO_MS = 5000;
 
 export default function App() {
@@ -18,11 +20,17 @@ export default function App() {
   const [focus, setFocus] = useState(null);
   const [undo, setUndo] = useState(null);
   const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(undefined); // undefined while loading, null before first launch is done
+  const [settings, setSettings] = useState(false);
+  const [backup, setBackup] = useState(null);
 
   const reload = () => db.visits.orderBy('createdAt').reverse().toArray().then(setVisits);
+  const loadProfile = () => db.profile.toCollection().first().then(p => setProfile(p ?? null));
   useEffect(() => {
     loadCountries().then(setCountries, setError);
     startPlaces().then(setPlaces, setError);
+    onBackupResult(setBackup);
+    loadProfile();
     reload();
   }, []);
 
@@ -34,9 +42,10 @@ export default function App() {
       .map(v => ({ id: v.geonameId, name: v.name, cc: v.countryCode, admin1: v.admin1Code, lat: v.lat, lon: v.lon }));
   }, [visits]);
 
-  async function save(place, date) {
-    const visit = makeVisit(place, countries.byCode[place.cc], { date });
+  async function save(place, date, dateTo) {
+    const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo });
     await db.visits.add(visit);
+    scheduleBackup();
     setAdding(false);
     setFocus({ lon: place.lon, lat: place.lat });
     await reload();
@@ -46,6 +55,7 @@ export default function App() {
 
   async function undoSave() {
     await db.visits.delete(undo.id);
+    scheduleBackup();
     setUndo(null);
     reload();
   }
@@ -56,10 +66,23 @@ export default function App() {
     return () => clearTimeout(t);
   }, [undo]);
 
+  if (profile === undefined) return <main />;
+  if (profile === null) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <main><Onboarding onDone={() => { loadProfile(); reload(); }} /></main>
+      </MotionConfig>
+    );
+  }
+
   return (
     <MotionConfig reducedMotion="user">
       <main>
-        {countries && <Globe geo={countries.geo} visited={s.visitedCodes} colour={MY_COLOUR} focus={focus} />}
+        {countries && <Globe geo={countries.geo} visited={s.visitedCodes} colour={profile.colour} focus={focus} />}
+        <button className="avatar" style={{ background: profile.colour }} aria-label="Settings and backup" onClick={() => setSettings(true)}>
+          {profile.name[0]?.toUpperCase()}
+        </button>
+        {backup && !backup.ok && <button className="backup-warn" onClick={() => setSettings(true)}>Backup failed. Tap to fix.</button>}
         <header className="counters" aria-label="Places I've been">
           <Counter value={s.continents} label={s.continents === 1 ? 'continent' : 'continents'} />
           <Counter value={s.countries} label={s.countries === 1 ? 'country' : 'countries'} />
@@ -83,6 +106,7 @@ export default function App() {
 
         <AnimatePresence>
           {adding && <AddVisit places={places} countries={countries} recent={recent} onSave={save} onClose={() => setAdding(false)} />}
+          {settings && <Settings profile={profile} backup={backup} onClose={() => setSettings(false)} />}
         </AnimatePresence>
       </main>
     </MotionConfig>

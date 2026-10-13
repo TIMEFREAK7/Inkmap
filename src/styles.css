@@ -19,7 +19,7 @@ button { font: inherit; color: inherit; }
 .globe { position: absolute; inset: 0; }
 
 .counters {
-  position: absolute; top: calc(var(--top) + 16px); left: 16px; right: 16px;
+  position: absolute; top: calc(var(--top) + 16px); left: 72px; right: 16px;
   display: flex; justify-content: space-around; pointer-events: none;
 }
 .counter { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
@@ -85,3 +85,55 @@ button { font: inherit; color: inherit; }
   margin-top: auto; min-height: 56px; border: none; border-radius: 16px; background: var(--accent);
   color: #1a1205; font-size: 18px; font-weight: 700; cursor: pointer;
 }
+
+/* Avatar: opens Settings; top-left is fine for something used rarely. */
+.avatar {
+  position: absolute; top: calc(var(--top) + 16px); left: 16px; width: 48px; height: 48px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4); color: #10131f; font-size: 20px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar.big { position: static; width: 64px; height: 64px; font-size: 28px; }
+.backup-warn {
+  position: absolute; top: calc(var(--top) + 88px); left: 16px; min-height: 48px; padding: 0 16px; border-radius: 24px;
+  border: none; background: #8a2433; font-weight: 600; cursor: pointer;
+}
+
+/* First launch */
+.onboarding {
+  position: absolute; inset: 0; padding: calc(var(--top) + 24px) 20px calc(var(--bottom) + 20px);
+  display: flex; flex-direction: column; gap: 8px; overflow-y: auto; background: var(--bg);
+}
+.title { font-size: 32px; line-height: 1.2; margin: 24px 0 8px; }
+.title.small { font-size: 24px; margin: 0; }
+.lead { font-size: 18px; color: var(--muted); margin: 0 0 8px; }
+.facts { font-size: 18px; margin: 0 0 8px; padding-left: 20px; }
+.actions { margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding-top: 24px; }
+.actions .primary { margin-top: 0; }
+.primary:disabled { opacity: 0.4; }
+.secondary {
+  min-height: 56px; border-radius: 16px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.08);
+  font-size: 18px; font-weight: 600; cursor: pointer;
+}
+.warn { color: #ffb4b4; margin: 4px 0; font-size: 16px; }
+.hint-inline { color: var(--muted); font-size: 16px; }
+.colours { border: none; padding: 0; flex-direction: row; flex-wrap: wrap; gap: 12px; }
+.colours legend { margin-bottom: 8px; padding: 0; }
+.swatch { width: 48px; height: 48px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+.swatch.picked { border-color: #fff; box-shadow: 0 0 0 2px var(--bg) inset; }
+
+/* Visit duration */
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; min-width: 0; margin-top: 16px; }
+.field-row .days { flex: 0 0 96px; }
+.optional { color: var(--muted); font-size: 16px; }
+
+/* Settings */
+.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.scroll { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 12px 0; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); }
+.card p { margin: 0; }
+.me { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.me-name { font-size: 22px; font-weight: 700; }
+.label { color: var(--muted); font-weight: 600; }
+.friend-id { font: 700 28px/1.2 ui-monospace, monospace; letter-spacing: 1px; }
+.card .hint { margin: 0; }

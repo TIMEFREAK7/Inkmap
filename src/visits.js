@@ -1,6 +1,6 @@
 // Visits and the counts derived from them. Counts are always computed from visits, never stored.
 
-export function makeVisit(place, country, { date, source = 'manual', exitedAirport = true, note = '' }) {
+export function makeVisit(place, country, { date, dateTo, source = 'manual', exitedAirport = true, note = '' }) {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
@@ -12,6 +12,7 @@ export function makeVisit(place, country, { date, source = 'manual', exitedAirpo
     lat: place.lat,
     lon: place.lon,
     dateFrom: date,
+    dateTo: dateTo || undefined, // optional last day; duration is computed from the two
     note,
     source,
     // Counting rule: only visits where the person left the airport count. Manual logs are real visits.

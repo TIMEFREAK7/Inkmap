@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 
-const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+import { today, daysBetween, endAfter } from './dates.js';
 
 // Search-first logging: type, pick, save. The date defaults to today.
 export default function AddVisit({ places, countries, recent, onSave, onClose }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [picked, setPicked] = useState(null);
-  const [date, setDate] = useState(today);
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(''); // optional last day; '' means a one-day visit
+  const days = to ? daysBetween(from, to) : '';
   const latest = useRef(0);
   const input = useRef(null);
 
@@ -55,9 +57,24 @@ export default function AddVisit({ places, countries, recent, onSave, onClose })
           <p className="result-where">{label(picked)}</p>
           <label className="field">
             When did you go?
-            <input type="date" value={date} max={today()} onChange={e => setDate(e.target.value || today())} />
+            <input type="date" value={from} max={today()} onChange={e => {
+              const f = e.target.value || today();
+              if (to) setTo(endAfter(f, days)); // moving the start keeps the length of the stay
+              setFrom(f);
+            }} />
           </label>
-          <button className="primary" onClick={() => onSave(picked, date)}>Save this place</button>
+          <div className="field-row">
+            <label className="field">
+              <span>Until <span className="optional">(optional)</span></span>
+              <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)} />
+            </label>
+            <label className="field days">
+              Days
+              <input type="number" inputMode="numeric" min="1" max="3650" value={days} placeholder="1"
+                onChange={e => { const n = parseInt(e.target.value, 10); setTo(n >= 1 ? endAfter(from, Math.min(n, 3650)) : ''); }} />
+            </label>
+          </div>
+          <button className="primary" onClick={() => onSave(picked, from, to)}>Save this place</button>
         </div>
       )}
     </motion.div>
