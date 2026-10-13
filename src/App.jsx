@@ -1,34 +1,99 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import Globe from './Globe.jsx';
 import FpsMeter from './FpsMeter.jsx';
-import Spikes from './Spikes.jsx';
-import { loadCountries, loadPlaces } from './data.js';
+import AddVisit from './AddVisit.jsx';
+import { loadCountries, startPlaces } from './data.js';
+import { db } from './db.js';
+import { makeVisit, stats } from './visits.js';
 
-// Tier 0 feasibility screen: globe with every country filled, fps meter, and place-data load time.
+const MY_COLOUR = '#f6ad3b'; // shortcut: fixed until the profile screen lets each person choose (Tier 1, first launch)
+const UNDO_MS = 5000;
+
 export default function App() {
   const [countries, setCountries] = useState(null);
   const [places, setPlaces] = useState(null);
+  const [visits, setVisits] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [focus, setFocus] = useState(null);
+  const [undo, setUndo] = useState(null);
   const [error, setError] = useState(null);
-  const [frosted, setFrosted] = useState(true);
 
+  const reload = () => db.visits.orderBy('createdAt').reverse().toArray().then(setVisits);
   useEffect(() => {
     loadCountries().then(setCountries, setError);
-    loadPlaces().then(setPlaces, setError);
+    startPlaces().then(setPlaces, setError);
+    reload();
   }, []);
 
+  const s = useMemo(() => stats(visits, countries?.list.length), [visits, countries]);
+  // Recent places for the empty search: newest first, each place once.
+  const recent = useMemo(() => {
+    const seen = new Set();
+    return visits.filter(v => !seen.has(v.geonameId) && seen.add(v.geonameId)).slice(0, 8)
+      .map(v => ({ id: v.geonameId, name: v.name, cc: v.countryCode, admin1: v.admin1Code, lat: v.lat, lon: v.lon }));
+  }, [visits]);
+
+  async function save(place, date) {
+    const visit = makeVisit(place, countries.byCode[place.cc], { date });
+    await db.visits.add(visit);
+    setAdding(false);
+    setFocus({ lon: place.lon, lat: place.lat });
+    await reload();
+    navigator.vibrate?.(20);
+    setUndo({ id: visit.id, text: `Saved ${place.name}` });
+  }
+
+  async function undoSave() {
+    await db.visits.delete(undo.id);
+    setUndo(null);
+    reload();
+  }
+
+  useEffect(() => {
+    if (!undo) return;
+    const t = setTimeout(() => setUndo(null), UNDO_MS);
+    return () => clearTimeout(t);
+  }, [undo]);
+
   return (
-    <main>
-      {countries && <Globe geo={countries.geo} />}
-      <div className={frosted ? 'panel' : 'panel solid'}>
-        <h1>Inkmap</h1>
+    <MotionConfig reducedMotion="user">
+      <main>
+        {countries && <Globe geo={countries.geo} visited={s.visitedCodes} colour={MY_COLOUR} focus={focus} />}
+        <header className="counters" aria-label="Places I've been">
+          <Counter value={s.continents} label={s.continents === 1 ? 'continent' : 'continents'} />
+          <Counter value={s.countries} label={s.countries === 1 ? 'country' : 'countries'} />
+          <Counter value={s.cities} label={s.cities === 1 ? 'city' : 'cities'} />
+        </header>
         <FpsMeter />
-        <p>{countries ? `${countries.list.length} countries` : 'Loading countries…'}</p>
-        <p>{places ? `${places.count.toLocaleString()} places loaded in ${places.ms} ms (background)` : 'Loading places…'}</p>
-        {/* Tier 0: does the panel's background blur cost globe frames? Compare the meter with it on and off. */}
-        <button className="button" onClick={() => setFrosted(!frosted)}>Frosted panel: {frosted ? 'on' : 'off'}</button>
-        <Spikes />
-        {error && <p role="alert">Could not load data: {String(error)}</p>}
-      </div>
-    </main>
+        {error && <p className="error" role="alert">Something went wrong loading the map data: {String(error)}</p>}
+
+        <div className="bottom">
+          <AnimatePresence>
+            {undo && (
+              <motion.div className="undo" role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+                <span>{undo.text}</span>
+                <button className="text-button" onClick={undoSave}>Undo</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {visits.length === 0 && !adding && <p className="empty">Tap + to add your first place</p>}
+          <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
+        </div>
+
+        <AnimatePresence>
+          {adding && <AddVisit places={places} countries={countries} recent={recent} onSave={save} onClose={() => setAdding(false)} />}
+        </AnimatePresence>
+      </main>
+    </MotionConfig>
+  );
+}
+
+function Counter({ value, label }) {
+  return (
+    <div className="counter">
+      <motion.span key={value} className="counter-value" initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{value}</motion.span>
+      <span className="counter-label">{label}</span>
+    </div>
   );
 }

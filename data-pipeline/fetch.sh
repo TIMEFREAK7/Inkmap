@@ -4,6 +4,7 @@ set -euo pipefail
 R="$(dirname "$0")/.raw"; mkdir -p "$R"; cd "$R"
 curl -sSfLO https://download.geonames.org/export/dump/cities1000.zip
 curl -sSfLO https://download.geonames.org/export/dump/countryInfo.txt
+curl -sSfLO https://download.geonames.org/export/dump/admin1CodesASCII.txt
 curl -sSfLO https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_map_units.zip
 curl -sSfLO https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip
 curl -sSfLO https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_1_states_provinces.zip

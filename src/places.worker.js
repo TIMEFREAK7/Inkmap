@@ -1,8 +1,14 @@
 import { parsePlaces } from './data.js';
+import { buildIndex, search } from './search.js';
 
-// Parsing 171k places takes hundreds of ms; doing it here keeps the globe's frames free.
-self.onmessage = async ({ data: url }) => {
-  const t0 = performance.now();
-  const places = parsePlaces(await fetch(url).then(r => r.text()));
-  self.postMessage({ count: places.length, ms: Math.round(performance.now() - t0) });
+// Holds all 171k places and the search index off the main thread, so typing never stalls the globe.
+let index;
+self.onmessage = async ({ data }) => {
+  if (data.type === 'load') {
+    const t0 = performance.now();
+    index = buildIndex(parsePlaces(await fetch(data.url).then(r => r.text())));
+    self.postMessage({ id: data.id, count: index.places.length, ms: Math.round(performance.now() - t0) });
+  } else if (data.type === 'search') {
+    self.postMessage({ id: data.id, results: search(index, data.query) });
+  }
 };

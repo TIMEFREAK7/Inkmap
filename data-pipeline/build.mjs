@@ -137,6 +137,17 @@ function buildBoundaries(codes) {
   return [...codes].filter(c => !have.has(c));
 }
 
+// --- State/province names (GeoNames admin1), to tell same-named places apart in search ---
+function buildAdmin1() {
+  const names = {};
+  for (const l of fs.readFileSync(path.join(RAW, 'admin1CodesASCII.txt'), 'utf8').split('\n')) {
+    const [code, name] = l.split('\t');
+    if (name) names[code] = name; // "IN.16" -> "Maharashtra"
+  }
+  fs.writeFileSync(path.join(OUT, 'admin1.json'), JSON.stringify(names));
+  return Object.keys(names).length;
+}
+
 // --- Airports (OurAirports) ---
 function buildAirports() {
   const rows = readCsv(path.join(RAW, 'airports.csv'))
@@ -153,7 +164,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const places = buildPlaces(codes);
   const missing = buildBoundaries(codes);
   const airports = buildAirports();
-  console.log(`countries: ${countries.length}, places: ${places}, airports: ${airports}`);
+  const admin1 = buildAdmin1();
+  console.log(`countries: ${countries.length}, places: ${places}, airports: ${airports}, admin1: ${admin1}`);
   // Tiny entries with no Natural Earth shape still count; they just can't be shaded on the map.
   console.log('No boundary shape for:', missing.join(', ') || 'none');
   for (const f of fs.readdirSync(OUT)) console.log(`${f}: ${(fs.statSync(path.join(OUT, f)).size / 1048576).toFixed(2)} MB`);
