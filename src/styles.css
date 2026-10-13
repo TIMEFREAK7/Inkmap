@@ -17,6 +17,7 @@ body { font: 16px/1.4 system-ui, sans-serif; }
   padding: 16px; border-radius: 20px; background: var(--panel);
   border: 1px solid var(--border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
 }
+.panel.solid { background: #141c38; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .panel h1 { margin: 0 0 8px; font-size: 20px; }
 .panel p { margin: 4px 0; }
 .fps { font-variant-numeric: tabular-nums; font-weight: 600; }
