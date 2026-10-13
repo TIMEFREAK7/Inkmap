@@ -20,3 +20,10 @@ body { font: 16px/1.4 system-ui, sans-serif; }
 .panel h1 { margin: 0 0 8px; font-size: 20px; }
 .panel p { margin: 4px 0; }
 .fps { font-variant-numeric: tabular-nums; font-weight: 600; }
+.spikes { display: grid; gap: 8px; margin-top: 12px; }
+.button {
+  display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 16px;
+  border-radius: 14px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.1);
+  color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+}
+.wrap { overflow-wrap: anywhere; font-size: 14px; }
