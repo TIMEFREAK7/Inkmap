@@ -32,6 +32,12 @@ export function parsePlaces(text) {
   return places;
 }
 
-export async function loadPlaces() {
-  return parsePlaces(await fetch(url('places.tsv')).then(r => r.text()));
+// shortcut: the worker only reports the count for the Tier 0 screen; Tier 1 search will query places inside it.
+export function loadPlaces() {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./places.worker.js', import.meta.url), { type: 'module' });
+    worker.onmessage = e => { resolve(e.data); worker.terminate(); };
+    worker.onerror = e => { reject(new Error(e.message || 'places worker failed')); worker.terminate(); };
+    worker.postMessage(new URL(url('places.tsv'), document.baseURI).href); // absolute: the worker's own base is assets/
+  });
 }

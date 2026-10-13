@@ -11,8 +11,7 @@ export default function App() {
 
   useEffect(() => {
     loadCountries().then(setCountries, setError);
-    const t0 = performance.now();
-    loadPlaces().then(p => setPlaces({ count: p.length, ms: Math.round(performance.now() - t0) }), setError);
+    loadPlaces().then(setPlaces, setError);
   }, []);
 
   return (
@@ -22,7 +21,7 @@ export default function App() {
         <h1>Inkmap</h1>
         <FpsMeter />
         <p>{countries ? `${countries.list.length} countries` : 'Loading countries…'}</p>
-        <p>{places ? `${places.count.toLocaleString()} places loaded in ${places.ms} ms` : 'Loading places…'}</p>
+        <p>{places ? `${places.count.toLocaleString()} places loaded in ${places.ms} ms (background)` : 'Loading places…'}</p>
         {error && <p role="alert">Could not load data: {String(error)}</p>}
       </div>
     </main>

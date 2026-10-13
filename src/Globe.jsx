@@ -12,6 +12,7 @@ export const CONTINENT_COLOURS = {
 };
 
 const DEG_PER_MS = 360 / 120000; // one turn every 2 minutes
+const SPIN_STEP_MS = 10000;
 const RESUME_AFTER_MS = 5000;
 
 // No tile server: the only source is the bundled country GeoJSON.
@@ -42,25 +43,29 @@ export default function Globe({ geo }) {
     const map = new MapLibreMap({
       container: el.current, style: style(geo), center: [78, 20], zoom: 1.6,
       attributionControl: false, renderWorldCopies: false,
+      // Phones report 3-4x; past 2x the extra pixels cost GPU time without a visible difference on the globe.
+      pixelRatio: Math.min(devicePixelRatio, 2),
     });
 
+    // Spin with MapLibre's own animation so each camera step lands on a frame it renders.
+    // Chained 10 s linear eases; a touch cancels the ease, and moveend restarts it after RESUME_AFTER_MS idle.
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let last = performance.now(), touchedAt = -Infinity, raf;
-    const spin = now => {
-      const dt = now - last;
-      last = now;
-      if (!reduced && now - touchedAt > RESUME_AFTER_MS && !map.isMoving()) {
-        const c = map.getCenter();
-        map.setCenter([c.lng - dt * DEG_PER_MS, c.lat]);
-      }
-      raf = requestAnimationFrame(spin);
+    let touchedAt = -Infinity, timer;
+    const spin = () => {
+      const c = map.getCenter();
+      map.easeTo({ center: [c.lng - SPIN_STEP_MS * DEG_PER_MS, c.lat], duration: SPIN_STEP_MS, easing: t => t });
+    };
+    const scheduleSpin = () => {
+      clearTimeout(timer);
+      if (!reduced) timer = setTimeout(spin, Math.max(0, touchedAt + RESUME_AFTER_MS - performance.now()));
     };
     const touch = () => { touchedAt = performance.now(); };
     map.on('mousedown', touch);
     map.on('touchstart', touch);
     map.on('wheel', touch);
-    map.on('load', () => { raf = requestAnimationFrame(spin); });
-    return () => { cancelAnimationFrame(raf); map.remove(); };
+    map.on('moveend', scheduleSpin);
+    map.on('load', scheduleSpin);
+    return () => { clearTimeout(timer); map.remove(); };
   }, [geo]);
 
   return <div ref={el} className="globe" />;

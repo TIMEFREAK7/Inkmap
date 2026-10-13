@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-// Tier 0 gate: shows average fps and the slowest frame over the last 5 seconds.
+// Tier 0 gate: average fps, dropped frames and the slowest frame over each 5 seconds.
+// A frame counts as dropped when it took over 1.5x the typical (median) frame: 8.3 ms on a 120 Hz screen.
 export default function FpsMeter() {
   const [stats, setStats] = useState(null);
   useEffect(() => {
@@ -10,7 +11,13 @@ export default function FpsMeter() {
       prev = now;
       const total = frames.reduce((a, b) => a + b, 0);
       if (total >= 5000) {
-        setStats({ fps: Math.round((frames.length * 1000) / total), worst: Math.round(Math.max(...frames)) });
+        const typical = [...frames].sort((a, b) => a - b)[frames.length >> 1];
+        setStats({
+          fps: Math.round((frames.length * 1000) / total),
+          hz: Math.round(1000 / typical),
+          dropped: frames.filter(f => f > typical * 1.5).length,
+          worst: Math.round(Math.max(...frames)),
+        });
         frames = [];
       }
       raf = requestAnimationFrame(tick);
@@ -20,7 +27,7 @@ export default function FpsMeter() {
   }, []);
   return (
     <div className="fps" aria-live="polite">
-      {stats ? `${stats.fps} fps · slowest frame ${stats.worst} ms` : 'Measuring…'}
+      {stats ? `${stats.fps} fps of ${stats.hz} Hz · ${stats.dropped} dropped · slowest ${stats.worst} ms` : 'Measuring…'}
     </div>
   );
 }
