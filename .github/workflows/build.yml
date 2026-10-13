@@ -1,0 +1,92 @@
+name: Build
+
+# Every push is tested and built. Pushes to main also publish a GitHub release with the signed APK and Windows installer.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with: { name: web, path: dist }
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: npm run build && npx cap sync android
+      - name: Decode release keystore
+        env: { KEYSTORE_BASE64: '${{ secrets.KEYSTORE_BASE64 }}' }
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            if [ "$GITHUB_REF" = refs/heads/main ]; then echo "::error::KEYSTORE_BASE64 secret missing; main must build a signed APK"; exit 1; fi
+            echo "::warning::No keystore secret; building an unsigned APK"; exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/inkmap.jks"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/inkmap.jks" >> "$GITHUB_ENV"
+      - name: Build release APK
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+      - name: Check the APK has no network permission and report size
+        run: |
+          APK=$(ls android/app/build/outputs/apk/release/*.apk)
+          AAPT=$(ls $ANDROID_HOME/build-tools/*/aapt2 | tail -1)
+          if $AAPT dump permissions "$APK" | grep -q android.permission.INTERNET; then echo "::error::APK declares INTERNET"; exit 1; fi
+          if [ -n "$KEYSTORE_FILE" ]; then $(dirname $AAPT)/apksigner verify --print-certs "$APK" | grep SHA-256; fi
+          ls -l "$APK"
+          SIZE=$(stat -c %s "$APK"); echo "APK size: $((SIZE / 1048576)) MB" >> "$GITHUB_STEP_SUMMARY"
+          [ "$SIZE" -lt $((80 * 1048576)) ] || { echo "::error::APK over 80 MB"; exit 1; }
+          mkdir -p out && cp "$APK" out/Inkmap-${{ github.run_number }}.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: out/*.apk }
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run dist:win
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: 'release/*.exe' }
+
+  release:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release create "v0.1.${{ github.run_number }}" artifacts/android/*.apk artifacts/windows/*.exe \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Inkmap 0.1.${{ github.run_number }}" \
+            --notes "Built from ${{ github.sha }}"

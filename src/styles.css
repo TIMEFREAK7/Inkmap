@@ -1,0 +1,22 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b1026;
+  --text: #e8ecf5;
+  --panel: rgba(20, 28, 56, 0.6);
+  --border: rgba(255, 255, 255, 0.15);
+}
+
+* { box-sizing: border-box; }
+html, body, #root, main { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+body { font: 16px/1.4 system-ui, sans-serif; }
+
+.globe { position: absolute; inset: 0; }
+
+.panel {
+  position: absolute; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom));
+  padding: 16px; border-radius: 20px; background: var(--panel);
+  border: 1px solid var(--border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.panel h1 { margin: 0 0 8px; font-size: 20px; }
+.panel p { margin: 4px 0; }
+.fps { font-variant-numeric: tabular-nums; font-weight: 600; }

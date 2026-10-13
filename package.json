@@ -1,0 +1,71 @@
+{
+  "name": "inkmap",
+  "version": "0.1.0",
+  "description": "Personal offline travel log",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "data": "node data-pipeline/build.mjs",
+    "data:fetch": "bash data-pipeline/fetch.sh",
+    "electron:dev": "INKMAP_DEV_URL=http://localhost:5173 electron .",
+    "dist:win": "vite build && electron-builder --win --publish never"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TIMEFREAK7/Inkmap.git"
+  },
+  "author": "Aditya",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TIMEFREAK7/Inkmap/issues"
+  },
+  "homepage": "https://github.com/TIMEFREAK7/Inkmap#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "dexie": "^4.4.6",
+    "maplibre-gl": "^6.14.0",
+    "motion": "^14.1.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "topojson-client": "^3.1.0"
+  },
+  "overrides": {
+    "rollup": "4.64.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "fake-indexeddb": "^6.2.5",
+    "mapshaper": "^0.7.84",
+    "vite": "^8.3.4",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.4"
+  },
+  "private": true,
+  "type": "module",
+  "build": {
+    "appId": "com.timefreak7.inkmap",
+    "productName": "Inkmap",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    }
+  }
+}
