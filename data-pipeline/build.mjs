@@ -163,12 +163,13 @@ async function buildRegions(countries) {
         return fs.existsSync(simplified) ? simplified : file;
       });
       if (!fs.existsSync(out)) {
-        // 150 m: borders stay true at city zoom; finer only grew files (France 5 MB here, 7.5 MB at 50 m).
+        // 500 m and 1e5 quantization keep the APK near 25 MB (borders within 500 m of true: a sliver at district zoom).
+        // 150 m with 1e6 made a 65 MB APK, 300 m 32 MB; the APK must stay under 30 MB to be sent to a phone directly.
         await run(MAPSHAPER, ['-quiet', '-i', ...inputs, ...(inputs.length > 1 ? ['combine-files'] : []),
           '-rename-layers', sources[cc].map(s => s.level).join(','), 'target=*',
           '-filter-fields', 'shapeName', 'target=*',
-          '-simplify', 'interval=150', 'keep-shapes', 'target=*',
-          '-o', out, 'format=topojson', 'quantization=1000000', 'target=*'], { maxBuffer: 1 << 26 });
+          '-simplify', 'interval=500', 'keep-shapes', 'target=*',
+          '-o', out, 'format=topojson', 'quantization=100000', 'target=*'], { maxBuffer: 1 << 26 });
       }
       if (++done % 20 === 0) console.log(`regions ${done}`);
     }
