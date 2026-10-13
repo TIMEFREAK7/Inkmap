@@ -105,6 +105,8 @@ function buildPlaces(codes) {
 // Natural Earth splits some disputed or special areas off; give the inhabited ones to the country GeoNames uses.
 const UNIT_FIX = { SOL: 'SO', CYN: 'CY', CNM: 'CY', ESB: 'CY', WSB: 'CY', KOR: 'KR', PRK: 'KP', USG: 'CU', SYR: 'SY' };
 
+const REGION_LEVEL = ['GB', 'FR', 'IT', 'ES'];
+
 function mapshaper(...args) {
   execFileSync(MAPSHAPER, ['-quiet', ...args], { stdio: 'inherit' });
 }
@@ -127,8 +129,19 @@ function buildBoundaries(codes) {
   );
   mapshaper(
     '-i', path.join(RAW, 'ne_10m_admin_1_states_provinces', 'ne_10m_admin_1_states_provinces.shp'),
-    '-filter-fields', 'iso_a2,gn_a1_code,name',
-    '-simplify', '4%', 'keep-shapes',
+    '-filter-fields', 'iso_a2,name,region,geonunit,adm1_code',
+    // Natural Earth splits these countries into units smaller than a pin (London's boroughs, Paris as a département).
+    // Merge them into the regions people think in, the same level GeoNames uses there.
+    // UK: Scotland, Wales and Northern Ireland whole (their "regions" are statistical areas like "Eastern"),
+    // England by region (London, South East, ...).
+    '-each', `group = iso_a2 === 'GB' && geonunit !== 'England' ? geonunit : region;
+      grouped = ${JSON.stringify(REGION_LEVEL)}.indexOf(iso_a2) > -1 && group;
+      unit = grouped ? iso_a2 + '|' + group : adm1_code; if (grouped) name = group`,
+    '-dissolve2', 'unit', 'copy-fields=iso_a2,name',
+    '-filter-fields', 'iso_a2,name',
+    // By distance, not percentage: a percentage moved coasts enough to put NYC in New Jersey. 1 km keeps 99.8% of
+    // big cities in the right state (with stateFor's fallback) for 3.7 MB; finer limits gained nothing.
+    '-simplify', 'interval=1000', 'keep-shapes',
     '-rename-layers', 'states',
     '-o', path.join(OUT, 'states.topo.json'), 'format=topojson', 'quantization=100000',
   );
