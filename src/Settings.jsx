@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { BackupFolder } from './native.js';
 import { hasBackupFolder, backupNow } from './backup.js';
+import { COLOURS } from './Onboarding.jsx';
 
-export default function Settings({ profile, backup, onClose }) {
+export default function Settings({ profile, backup, onSaveProfile, onClose }) {
+  const [name, setName] = useState(profile.name);
   const [folder, setFolder] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -34,6 +36,18 @@ export default function Settings({ profile, backup, onClose }) {
             <span className="avatar big" style={{ background: profile.colour }}>{profile.name[0]?.toUpperCase()}</span>
             <span className="me-name">{profile.name}</span>
           </div>
+          <label className="field compact">
+            Name
+            <input value={name} maxLength={40} onChange={e => setName(e.target.value)}
+              onBlur={() => name.trim() && name.trim() !== profile.name && onSaveProfile({ name: name.trim() })} />
+          </label>
+          <fieldset className="field colours compact">
+            <legend>Your colour on the map</legend>
+            {COLOURS.map(c => (
+              <button key={c} className={c === profile.colour ? 'swatch picked' : 'swatch'} style={{ background: c }}
+                aria-label={`Colour ${c}`} aria-pressed={c === profile.colour} onClick={() => onSaveProfile({ colour: c })} />
+            ))}
+          </fieldset>
           <p className="label">Your friend ID</p>
           <p className="friend-id">{profile.friendId}</p>
           <button className="secondary" onClick={copyId}>{copied ? 'Copied' : 'Copy ID'}</button>

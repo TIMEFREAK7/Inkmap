@@ -33,3 +33,28 @@ export function stats(visits, totalCountries) {
     visitedCodes: [...countries],
   };
 }
+
+export const CONTINENTS = ['Asia', 'Europe', 'Africa', 'North America', 'South America', 'Oceania', 'Antarctica'];
+
+// One hue per continent, for rings now and passport stamp ink later.
+export const CONTINENT_HUES = {
+  'Asia': '#ef6f6c', 'Europe': '#6ea8fe', 'Africa': '#f2b84b', 'North America': '#4fd1a5',
+  'South America': '#b28dff', 'Oceania': '#38c6e0', 'Antarctica': '#d7dee8',
+};
+
+// Per continent: visited countries out of all countries there, for the Stats rings.
+export function continentProgress(visitedCodes, countryList) {
+  const visited = new Set(visitedCodes);
+  return CONTINENTS.map(continent => {
+    const all = countryList.filter(c => c.continent === continent);
+    return { continent, total: all.length, visited: all.filter(c => visited.has(c.code)).length };
+  });
+}
+
+// "3 May 2024" or "3–9 May 2024 · 7 days"; the locale decides day/month order.
+export function describeDates(v) {
+  const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (!v.dateTo || v.dateTo === v.dateFrom) return fmt(v.dateFrom);
+  const days = Math.round((Date.parse(v.dateTo) - Date.parse(v.dateFrom)) / 86400000) + 1;
+  return `${fmt(v.dateFrom)} – ${fmt(v.dateTo)} · ${days} days`;
+}

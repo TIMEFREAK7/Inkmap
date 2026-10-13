@@ -57,3 +57,10 @@ export function startPlaces() {
     search: query => ask({ type: 'search', query }).then(r => r.results),
   }));
 }
+
+// State/province shapes (1.2 MB), loaded the first time a country view opens.
+let states;
+export function loadStates() {
+  states ||= fetch(url('states.topo.json')).then(r => r.json()).then(topo => feature(topo, topo.objects.states));
+  return states;
+}

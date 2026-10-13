@@ -9,7 +9,6 @@ setWorkerUrl(workerUrl);
 const LAND = '#3b4a63'; // unvisited: muted slate
 
 const DEG_PER_MS = 360 / 40000; // one turn every 40 s (2 min read as sluggish on the phone)
-const SPIN_STEP_MS = 10000;
 const RESUME_AFTER_MS = 5000;
 
 // Visited countries in the person's colour, everything else muted slate.
@@ -37,10 +36,14 @@ function style(geo, visited, colour) {
 }
 
 // focus: { lon, lat } of a place just logged; the camera flies there and the new fill lands with it.
-export default function Globe({ geo, visited, colour, focus }) {
+export default function Globe({ geo, visited, colour, focus, paused, onCountry }) {
   const el = useRef(null);
   const mapRef = useRef(null);
   const touchRef = useRef(null);
+  const spinRef = useRef(null);
+  const pausedRef = useRef(paused);
+  const onCountryRef = useRef(onCountry);
+  onCountryRef.current = onCountry;
 
   useEffect(() => {
     const map = new MapLibreMap({
@@ -54,33 +57,47 @@ export default function Globe({ geo, visited, colour, focus }) {
       dragPan: { maxSpeed: 4000, deceleration: 1200 },
     });
 
-    // Spin with MapLibre's own animation so each camera step lands on a frame it renders.
-    // Chained linear eases; a touch cancels the ease, and moveend restarts it after RESUME_AFTER_MS idle.
+    // Idle spin: move the camera a little each frame. Not via chained easeTo: starting an ease from inside the
+    // moveend of the one ending left MapLibre running an orphaned frame callback ("_onEaseFrame is not a function").
+    // Skipped while the person or a camera flight is moving the map, and for RESUME_AFTER_MS after a touch.
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let touchedAt = -Infinity, timer;
-    const spin = () => {
-      const c = map.getCenter();
-      map.easeTo({ center: [c.lng - SPIN_STEP_MS * DEG_PER_MS, c.lat], duration: SPIN_STEP_MS, easing: t => t });
+    let touchedAt = -Infinity, raf = 0, last = 0;
+    const frame = now => {
+      const dt = Math.min(now - last, 50); // after a stall, carry on rather than jump
+      last = now;
+      if (now - touchedAt > RESUME_AFTER_MS && !map.isMoving()) {
+        const c = map.getCenter();
+        map.jumpTo({ center: [c.lng - dt * DEG_PER_MS, c.lat] });
+      }
+      raf = requestAnimationFrame(frame);
     };
-    const scheduleSpin = () => {
-      clearTimeout(timer);
-      if (reduced) return;
-      const wait = touchedAt + RESUME_AFTER_MS - performance.now();
-      if (wait > 0) timer = setTimeout(spin, wait);
-      else spin(); // chain straight on, so there's no paused frame between eases
+    const startSpin = () => {
+      if (raf || reduced || pausedRef.current) return; // nothing to see while another screen covers the globe
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
     };
+    const stopSpin = () => { cancelAnimationFrame(raf); raf = 0; };
     const touch = () => { touchedAt = performance.now(); };
     mapRef.current = map;
     touchRef.current = touch;
+    spinRef.current = { startSpin, stopSpin };
+    // A tap (not a drag) on a country opens it.
+    map.on('click', 'fill', e => onCountryRef.current?.(e.features[0].properties.iso));
     map.on('mousedown', touch);
     map.on('touchstart', touch);
     map.on('wheel', touch);
-    map.on('moveend', scheduleSpin);
-    map.on('load', scheduleSpin);
-    return () => { clearTimeout(timer); map.remove(); };
+    map.on('load', startSpin);
+    return () => { stopSpin(); map.remove(); };
     // The map is built once; visited/colour/focus changes are applied by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (!mapRef.current) return;
+    if (paused) spinRef.current.stopSpin();
+    else spinRef.current.startSpin();
+  }, [paused]);
 
   useEffect(() => {
     const map = mapRef.current;
