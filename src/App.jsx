@@ -90,6 +90,19 @@ export default function App() {
     loadProfile();
   }
 
+  // Android back gesture (MainActivity): close the topmost screen; false means nothing was open, so leave the app.
+  useEffect(() => {
+    window.inkmapBack = () => {
+      if (editing) setEditing(null);
+      else if (country) setCountry(null);
+      else if (adding) setAdding(false);
+      else if (settings) setSettings(false);
+      else if (tab !== 'globe') setTab('globe');
+      else return false;
+      return true;
+    };
+  });
+
   const where = v => [countries.admin1[`${v.countryCode}.${v.admin1Code}`], countries.byCode[v.countryCode]?.name].filter(Boolean).join(', ');
 
   useEffect(() => {
