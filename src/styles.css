@@ -187,3 +187,7 @@ button { font: inherit; color: inherit; }
 }
 .confirm { overflow-y: auto; }
 .field.compact { margin-top: 4px; }
+.sources { margin: 8px 0 0; padding-left: 0; list-style: none; font-size: 14px; color: var(--muted); display: grid; gap: 6px; }
+details summary { list-style: none; padding-left: 0; display: flex; align-items: center; }
+.country .results li { display: flex; align-items: center; }
+.country .results .result { flex: 1; min-width: 0; }

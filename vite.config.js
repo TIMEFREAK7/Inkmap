@@ -12,6 +12,10 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,json,tsv,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // places.tsv is ~11 MB
+        // State/district borders are 175 MB across 201 countries: cache each country when its view first opens
+        // instead of downloading them all on the first visit.
+        globIgnores: ['**/data/regions/**'],
+        runtimeCaching: [{ urlPattern: /\/data\/regions\//, handler: 'CacheFirst', options: { cacheName: 'regions' } }],
       },
     }),
   ],

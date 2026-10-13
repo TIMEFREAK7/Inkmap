@@ -3,11 +3,13 @@ import { motion } from 'motion/react';
 import { BackupFolder } from './native.js';
 import { hasBackupFolder, backupNow } from './backup.js';
 import { COLOURS } from './Onboarding.jsx';
+import { loadBoundarySources } from './data.js';
 
 export default function Settings({ profile, backup, onSaveProfile, onClose }) {
   const [name, setName] = useState(profile.name);
   const [folder, setFolder] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [sources, setSources] = useState(null);
 
   useEffect(() => { if (hasBackupFolder) BackupFolder.current().then(f => setFolder(f.name ? f : null), () => {}); }, []);
 
@@ -68,7 +70,18 @@ export default function Settings({ profile, backup, onSaveProfile, onClose }) {
 
         <section className="card">
           <p className="label">About</p>
-          <p className="hint">Place names from GeoNames (geonames.org), licensed CC BY 4.0. Country and state borders from Natural Earth. Airports from OurAirports. Continents follow the UN M49 regions.</p>
+          <p className="hint">Place names from GeoNames (geonames.org), licensed CC BY 4.0. Country outlines on the globe from Natural Earth. State and district borders from geoBoundaries (geoboundaries.org), each under its source's open licence. Airports from OurAirports. Continents follow the UN M49 regions.</p>
+          {/* Most boundary licences require naming the source, so every country's is listed. */}
+          <details onToggle={e => e.target.open && !sources && loadBoundarySources().then(setSources)}>
+            <summary className="text-button">Border sources by country</summary>
+            {sources && (
+              <ul className="sources">
+                {Object.entries(sources).map(([cc, levels]) => (
+                  <li key={cc}><b>{cc}</b> {levels.map(l => `${l.unit || l.level}: ${l.source} (${l.license})`).join('; ')}</li>
+                ))}
+              </ul>
+            )}
+          </details>
           <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source.</p>
         </section>
       </div>

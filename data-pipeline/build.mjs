@@ -2,7 +2,8 @@
 // Usage: node data-pipeline/build.mjs [rawDir]
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -105,8 +106,6 @@ function buildPlaces(codes) {
 // Natural Earth splits some disputed or special areas off; give the inhabited ones to the country GeoNames uses.
 const UNIT_FIX = { SOL: 'SO', CYN: 'CY', CNM: 'CY', ESB: 'CY', WSB: 'CY', KOR: 'KR', PRK: 'KP', USG: 'CU', SYR: 'SY' };
 
-const REGION_LEVEL = ['GB', 'FR', 'IT', 'ES'];
-
 function mapshaper(...args) {
   execFileSync(MAPSHAPER, ['-quiet', ...args], { stdio: 'inherit' });
 }
@@ -127,27 +126,55 @@ function buildBoundaries(codes) {
     '-rename-layers', 'countries',
     '-o', path.join(OUT, 'countries.topo.json'), 'format=topojson', 'quantization=100000',
   );
-  mapshaper(
-    '-i', path.join(RAW, 'ne_10m_admin_1_states_provinces', 'ne_10m_admin_1_states_provinces.shp'),
-    '-filter-fields', 'iso_a2,name,region,geonunit,adm1_code',
-    // Natural Earth splits these countries into units smaller than a pin (London's boroughs, Paris as a département).
-    // Merge them into the regions people think in, the same level GeoNames uses there.
-    // UK: Scotland, Wales and Northern Ireland whole (their "regions" are statistical areas like "Eastern"),
-    // England by region (London, South East, ...).
-    '-each', `group = iso_a2 === 'GB' && geonunit !== 'England' ? geonunit : region;
-      grouped = ${JSON.stringify(REGION_LEVEL)}.indexOf(iso_a2) > -1 && group;
-      unit = grouped ? iso_a2 + '|' + group : adm1_code; if (grouped) name = group`,
-    '-dissolve2', 'unit', 'copy-fields=iso_a2,name',
-    '-filter-fields', 'iso_a2,name',
-    // By distance, not percentage: a percentage moved coasts enough to put NYC in New Jersey. 1 km keeps 99.8% of
-    // big cities in the right state (with stateFor's fallback) for 3.7 MB; finer limits gained nothing.
-    '-simplify', 'interval=1000', 'keep-shapes',
-    '-rename-layers', 'states',
-    '-o', path.join(OUT, 'states.topo.json'), 'format=topojson', 'quantization=100000',
-  );
   const topo = JSON.parse(fs.readFileSync(path.join(OUT, 'countries.topo.json'), 'utf8'));
   const have = new Set(topo.objects.countries.geometries.map(g => g.properties.iso));
   return [...codes].filter(c => !have.has(c));
+}
+
+// --- States and districts per country (geoBoundaries, fetched by fetch-boundaries.mjs) ---
+// One file per country, loaded only when that country's view opens. Layers: adm1 (states), adm2 (districts).
+const GB = path.join(RAW, 'gb');
+const ISO3_EXTRA = { TW: 'TWN', XK: 'XKX' };
+const run = promisify(execFile);
+
+async function buildRegions(countries) {
+  const meta = JSON.parse(fs.readFileSync(path.join(GB, 'meta.json'), 'utf8'));
+  const iso3 = Object.fromEntries(readCsv(path.join(here, 'sources', 'm49.csv')).map(r => [r['ISO-alpha2 Code'], r['ISO-alpha3 Code']]));
+  Object.assign(iso3, ISO3_EXTRA);
+  const dir = path.join(OUT, 'regions');
+  fs.mkdirSync(dir, { recursive: true });
+  const sources = {};
+  const jobs = countries.map(c => c.code).filter(cc => {
+    const levels = ['ADM1', 'ADM2'].filter(l => fs.existsSync(path.join(GB, `${iso3[cc]}-${l}.json`)));
+    if (!levels.length) return false;
+    sources[cc] = levels.map(l => {
+      const m = meta.find(x => x.iso3 === iso3[cc] && x.level === l);
+      return { level: l === 'ADM1' ? 'adm1' : 'adm2', unit: m.unit, license: m.license, source: m.source };
+    });
+    return true;
+  });
+  let done = 0;
+  await Promise.all(Array.from({ length: 4 }, async () => {
+    for (let cc; (cc = jobs.shift());) {
+      const out = path.join(dir, `${cc}.json`);
+      const inputs = sources[cc].map(s => {
+        const file = path.join(GB, `${iso3[cc]}-${s.level.toUpperCase()}.json`);
+        const simplified = file.replace('.json', '.simplified.json'); // only fetched for huge sources
+        return fs.existsSync(simplified) ? simplified : file;
+      });
+      if (!fs.existsSync(out)) {
+        // 150 m: borders stay true at city zoom; finer only grew files (France 5 MB here, 7.5 MB at 50 m).
+        await run(MAPSHAPER, ['-quiet', '-i', ...inputs, ...(inputs.length > 1 ? ['combine-files'] : []),
+          '-rename-layers', sources[cc].map(s => s.level).join(','), 'target=*',
+          '-filter-fields', 'shapeName', 'target=*',
+          '-simplify', 'interval=150', 'keep-shapes', 'target=*',
+          '-o', out, 'format=topojson', 'quantization=1000000', 'target=*'], { maxBuffer: 1 << 26 });
+      }
+      if (++done % 20 === 0) console.log(`regions ${done}`);
+    }
+  }));
+  fs.writeFileSync(path.join(OUT, 'boundary-sources.json'), JSON.stringify(sources));
+  return Object.keys(sources).length;
 }
 
 // --- State/province names (GeoNames admin1), to tell same-named places apart in search ---
@@ -176,10 +203,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const codes = new Set(countries.map(c => c.code));
   const places = buildPlaces(codes);
   const missing = buildBoundaries(codes);
+  const regions = await buildRegions(countries);
   const airports = buildAirports();
   const admin1 = buildAdmin1();
-  console.log(`countries: ${countries.length}, places: ${places}, airports: ${airports}, admin1: ${admin1}`);
+  console.log(`countries: ${countries.length}, places: ${places}, airports: ${airports}, admin1: ${admin1}, countries with states/districts: ${regions}`);
   // Tiny entries with no Natural Earth shape still count; they just can't be shaded on the map.
   console.log('No boundary shape for:', missing.join(', ') || 'none');
-  for (const f of fs.readdirSync(OUT)) console.log(`${f}: ${(fs.statSync(path.join(OUT, f)).size / 1048576).toFixed(2)} MB`);
+  for (const f of fs.readdirSync(OUT)) if (f !== 'regions') console.log(`${f}: ${(fs.statSync(path.join(OUT, f)).size / 1048576).toFixed(2)} MB`);
+  const regionBytes = fs.readdirSync(path.join(OUT, 'regions')).reduce((a, f) => a + fs.statSync(path.join(OUT, 'regions', f)).size, 0);
+  console.log(`regions/: ${(regionBytes / 1048576).toFixed(1)} MB`);
 }

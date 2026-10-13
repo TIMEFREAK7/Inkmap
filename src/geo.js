@@ -61,9 +61,9 @@ function segDist2(px, py, [ax, ay], [bx, by]) {
   return (px - ax - t * dx) ** 2 + (py - ay - t * dy) ** 2;
 }
 
-// The state a place is in. Coastlines in the data can leave a coastal city (Tokyo, New York) just offshore,
-// so if no state contains it, take the state whose border passes closest, within ~0.3° (about 30 km).
-export function stateFor(lon, lat, features) {
+// The area (state or district) a place is in. Coastlines in the data can leave a coastal city just offshore,
+// so if no area contains it, take the one whose border passes closest, within ~0.3° (about 30 km).
+export function areaFor(lon, lat, features) {
   const inside = features.find(f => pointInFeature(lon, lat, f));
   if (inside) return inside;
   let best = null, bestD = 0.09; // squared degrees

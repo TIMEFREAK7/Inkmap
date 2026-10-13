@@ -58,9 +58,15 @@ export function startPlaces() {
   }));
 }
 
-// State/province shapes (1.2 MB), loaded the first time a country view opens.
-let states;
-export function loadStates() {
-  states ||= fetch(url('states.topo.json')).then(r => r.json()).then(topo => feature(topo, topo.objects.states));
-  return states;
+// States (adm1) and districts (adm2) of one country from geoBoundaries, loaded when its view first opens.
+// Resolves null for the few small territories geoBoundaries doesn't cover.
+const regions = {};
+export function loadRegions(code) {
+  regions[code] ||= fetch(url(`regions/${code}.json`))
+    .then(r => (r.ok ? r.json() : null))
+    .then(topo => topo && Object.fromEntries(Object.keys(topo.objects).map(k => [k, feature(topo, topo.objects[k]).features])))
+    .catch(() => null);
+  return regions[code];
 }
+
+export const loadBoundarySources = () => fetch(url('boundary-sources.json')).then(r => r.json());

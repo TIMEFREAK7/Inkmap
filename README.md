@@ -19,7 +19,7 @@ npm run electron:dev # Windows/desktop shell against the dev server (run `npm ru
 The bundled data in `public/data` is built by `data-pipeline/` and committed.
 
 ```sh
-npm run data:fetch   # downloads GeoNames, Natural Earth, OurAirports into data-pipeline/.raw
+npm run data:fetch   # downloads GeoNames, Natural Earth, OurAirports, geoBoundaries into data-pipeline/.raw
 npm run data         # writes public/data and prints file sizes
 ```
 
@@ -28,7 +28,7 @@ npm run data         # writes public/data and prints file sizes
 | `countries.json` | UN M49 (`data-pipeline/sources/m49.csv`) + GeoNames names | 250 entries: the 248 ISO entries M49 lists, plus Taiwan and Kosovo; each with one of 7 continents |
 | `places.tsv` | GeoNames `cities1000` | id, name, ASCII name, lat, lon, country, admin1, population, Latin-script alternate names |
 | `countries.topo.json` | Natural Earth 10m admin-0 map units (+ US Minor Outlying Islands from admin-0 countries) | One shape per ISO code, simplified |
-| `states.topo.json` | Natural Earth 10m admin-1 | States/provinces with their GeoNames admin1 code (`gn_a1_code`), simplified |
+| `regions/XX.json` | geoBoundaries gbOpen ADM1 + ADM2 (per-country licences, listed in `boundary-sources.json` and in Settings) | One file per country: states (`adm1`) and districts (`adm2`), simplified to 150 m; loaded when that country's view opens |
 | `airports.tsv` | OurAirports | Airports with an IATA code that are large, medium or have scheduled service |
 
 Continent rule: M49 region, with Northern America, Central America and the Caribbean → North America. Antarctica (no M49 region) → Antarctica, Taiwan → Asia, Kosovo → Europe.
@@ -65,5 +65,6 @@ Vercel deploys `main` (framework preset: Vite, output `dist`). A service worker 
 | mapshaper (build-time only) | MPL-2.0 |
 | GeoNames data | CC BY 4.0 — © GeoNames, geonames.org |
 | Natural Earth data | Public domain |
+| geoBoundaries (gbOpen) | Per country: CC BY, ODbL, OGL, Etalab, public domain and others, all open; full list in `public/data/boundary-sources.json` |
 | OurAirports data | Public domain |
 | UN M49 table | United Nations Statistics Division |

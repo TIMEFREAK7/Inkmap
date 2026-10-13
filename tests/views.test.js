@@ -39,19 +39,34 @@ describe('visit dates', () => {
   });
 });
 
-const stopo = JSON.parse(fs.readFileSync('public/data/states.topo.json', 'utf8'));
-const states = feature(stopo, stopo.objects.states).features;
-import { pointInFeature, fitBox } from '../src/geo.js';
-const stateAt = (cc, lon, lat) => states.find(f => f.properties.iso_a2 === cc && pointInFeature(lon, lat, f))?.properties.name;
+import { pointInFeature, fitBox, areaFor } from '../src/geo.js';
 
-describe('state of a visited place', () => {
-  it('finds the state by position, including countries whose state codes do not match GeoNames', () => {
-    expect(stateAt('IN', 72.88, 19.07)).toBe('Maharashtra'); // Mumbai
-    expect(stateAt('GB', -0.13, 51.51)).toBeTruthy(); // London: GB codes never match
-    expect(stateAt('IT', 12.48, 41.89)).toBeTruthy(); // Rome
-    expect(stateAt('ES', -3.70, 40.42)).toBe('Madrid');
+// One country's geoBoundaries file: { adm1: [...states], adm2: [...districts] }.
+const regions = cc => {
+  const topo = JSON.parse(fs.readFileSync(`public/data/regions/${cc}.json`, 'utf8'));
+  return Object.fromEntries(Object.keys(topo.objects).map(k => [k, feature(topo, topo.objects[k]).features]));
+};
+import { norm } from '../src/search.js';
+const areaOf = (cc, level, lon, lat) => norm(areaFor(lon, lat, regions(cc)[level])?.properties.shapeName ?? '') || undefined; // sources spell with accents (Mahārāshtra)
+
+describe('state and district of a visited place', () => {
+  it('finds the state by position', () => {
+    expect(areaOf('IN', 'adm1', 72.8826, 19.0728)).toMatch(/Maharashtra/i); // Mumbai
+    expect(areaOf('US', 'adm1', -87.65, 41.85)).toBe('illinois'); // Chicago
+    expect(areaOf('US', 'adm1', -74.006, 40.7143)).toBe('new york'); // New York City, not New Jersey
+    expect(areaOf('JP', 'adm1', 139.6917, 35.6895)).toMatch(/Tokyo/i);
   });
-  it('is outside every state in the sea', () => expect(stateAt('IN', 70, 15)).toBeUndefined());
+  it('finds the district a city is in', () => {
+    expect(areaOf('IN', 'adm2', 72.8826, 19.0728)).toMatch(/Mumbai/i);
+    expect(areaOf('US', 'adm2', -87.65, 41.85)).toMatch(/Cook/i); // Chicago is in Cook County
+    expect(areaOf('FR', 'adm2', 2.3488, 48.8534)).toMatch(/Paris/i);
+  });
+  it('does not reach far out to sea', () => expect(areaOf('IN', 'adm1', 65, 12)).toBeUndefined());
+  it('ray casting respects holes', () => {
+    const square = { geometry: { type: 'Polygon', coordinates: [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]], [[4, 4], [6, 4], [6, 6], [4, 6], [4, 4]]] } };
+    expect(pointInFeature(1, 1, square)).toBe(true);
+    expect(pointInFeature(5, 5, square)).toBe(false);
+  });
 });
 
 describe('country view framing', () => {
@@ -72,27 +87,3 @@ describe('country view framing', () => {
   });
 });
 
-import { stateFor } from '../src/geo.js';
-const stateOf = (cc, lon, lat) => stateFor(lon, lat, states.filter(f => f.properties.iso_a2 === cc))?.properties.name;
-
-describe('state of a coastal place', () => {
-  it('falls back to the nearest state when simplification leaves the city offshore', () => {
-    expect(stateOf('JP', 139.69, 35.69)).toBe('Tokyo');
-    expect(stateOf('US', -74.006, 40.7143)).toBe('New York'); // GeoNames' own point for New York City
-    expect(stateOf('FR', 2.3488, 48.8534)).toBe('Île-de-France');
-  });
-  it('does not reach far out to sea', () => expect(stateOf('IN', 65, 12)).toBeUndefined());
-});
-
-describe('state level people recognise', () => {
-  it('uses regions where Natural Earth units are smaller than a city', () => {
-    expect(stateOf('GB', -0.1257, 51.5085)).toBe('Greater London');
-    expect(stateOf('GB', -3.1965, 55.9521)).toBe('Scotland');
-    expect(stateOf('GB', -3.1791, 51.4816)).toBe('Wales');
-    expect(stateOf('IT', 12.4839, 41.8947)).toBe('Lazio');
-  });
-  it('keeps prefectures and states elsewhere', () => {
-    expect(stateOf('JP', 139.6917, 35.6895)).toBe('Tokyo');
-    expect(stateOf('US', -87.65, 41.85)).toBe('Illinois');
-  });
-});
