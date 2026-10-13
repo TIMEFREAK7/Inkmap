@@ -11,7 +11,7 @@ export const CONTINENT_COLOURS = {
   'South America': '#a855f7', 'Oceania': '#06b6d4', 'Antarctica': '#e2e8f0',
 };
 
-const DEG_PER_MS = 360 / 120000; // one turn every 2 minutes
+const DEG_PER_MS = 360 / 40000; // one turn every 40 s (2 min read as sluggish on the phone)
 const SPIN_STEP_MS = 10000;
 const RESUME_AFTER_MS = 5000;
 
@@ -45,10 +45,14 @@ export default function Globe({ geo }) {
       attributionControl: false, renderWorldCopies: false,
       // Phones report 3-4x; past 2x the extra pixels cost GPU time without a visible difference on the globe.
       pixelRatio: Math.min(devicePixelRatio, 2),
+      // Smooth edges: without it, slow rotation makes coastlines and borders hop a whole pixel at a time.
+      canvasContextAttributes: { antialias: true },
+      // Lighter flick than MapLibre's default (stops within ~0.5 s): faster release speed, longer glide.
+      dragPan: { maxSpeed: 4000, deceleration: 1200 },
     });
 
     // Spin with MapLibre's own animation so each camera step lands on a frame it renders.
-    // Chained 10 s linear eases; a touch cancels the ease, and moveend restarts it after RESUME_AFTER_MS idle.
+    // Chained linear eases; a touch cancels the ease, and moveend restarts it after RESUME_AFTER_MS idle.
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let touchedAt = -Infinity, timer;
     const spin = () => {
@@ -57,7 +61,10 @@ export default function Globe({ geo }) {
     };
     const scheduleSpin = () => {
       clearTimeout(timer);
-      if (!reduced) timer = setTimeout(spin, Math.max(0, touchedAt + RESUME_AFTER_MS - performance.now()));
+      if (reduced) return;
+      const wait = touchedAt + RESUME_AFTER_MS - performance.now();
+      if (wait > 0) timer = setTimeout(spin, wait);
+      else spin(); // chain straight on, so there's no paused frame between eases
     };
     const touch = () => { touchedAt = performance.now(); };
     map.on('mousedown', touch);
