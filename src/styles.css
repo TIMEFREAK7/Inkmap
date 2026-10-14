@@ -24,7 +24,8 @@ button { font: inherit; color: inherit; }
   position: absolute; top: calc(var(--top) + 16px); left: 72px; right: 16px;
   display: flex; justify-content: space-around; pointer-events: none;
 }
-.counter { display: flex; flex-direction: column; align-items: center; min-width: 80px; text-shadow: 0 0 8px var(--bg), 0 0 16px var(--bg); } /* legible over the globe's bright rim */
+.counter { display: flex; flex-direction: column; align-items: center; min-width: 80px; filter: drop-shadow(0 0 4px var(--bg)) drop-shadow(0 0 8px var(--bg)); }
+/* Legible over the globe's bright rim. drop-shadow, not text-shadow: the odometer clips each digit, which cut text-shadow into boxes. */
 .counter-value { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .counter-label { color: var(--muted); font-size: 16px; }
 
@@ -44,9 +45,12 @@ button { font: inherit; color: inherit; }
 .undo {
   position: absolute; left: 16px; right: 16px; bottom: calc(var(--bottom) + 112px); margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 480px;
-  padding: 4px 8px 4px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  padding: 4px 8px 4px 16px; border-radius: 16px; background: #1b2547; border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); z-index: 50;
 }
+/* Solid, one line: it often sits over a list, and see-through text over text was unreadable. */
+.undo span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undo.low { bottom: calc(var(--bottom) + 16px); } /* over a full-screen sheet there is no tab bar to clear */
 
 .text-button {
   min-height: 48px; min-width: 48px; padding: 0 12px; border: none; background: none;
@@ -212,7 +216,9 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 .check input { width: 24px; height: 24px; accent-color: var(--accent); }
 
 /* Family */
-.tab { min-width: 0; flex: 1; padding: 0 4px; font-size: 16px; } /* five slots: four tabs around the + button */
+.tab { min-width: 0; flex: 1; padding: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* five slots: four tabs around the + button */
+.tabs { padding: 4px; }
+.tabs .fab { flex: none; width: 64px; height: 64px; margin: -28px -4px 0; font-size: 36px; } /* overlaps its slot so the four labels get the width */
 .family-map { height: 32vh; min-height: 200px; border-radius: 20px; overflow: hidden; margin: 12px 0 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {

@@ -162,7 +162,7 @@ export default function App() {
             <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
             <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
             <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family'} onClick={() => setTab('family')}>Family</button>
-            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport'} onClick={() => setTab('passport')}>Passport</button>
+            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport'} onClick={() => setTab('passport')}>Stamps</button>
           </nav>
         </div>
 
@@ -180,7 +180,7 @@ export default function App() {
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
         <AnimatePresence>
           {undo && (
-            <motion.div className="undo" role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+            <motion.div className={adding || country || editing || settings ? 'undo low' : 'undo'} role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
               <span>{undo.text}</span>
               <button className="text-button" onClick={undoLast}>Undo</button>
             </motion.div>
