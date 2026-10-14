@@ -92,7 +92,7 @@ export default function App() {
       setScan(result);
       scheduleBackup();
     } catch (e) {
-      setScan({ error: `Could not read photos: ${e.message}` });
+      setScan(e.message === 'No folder chosen' ? null : { error: `Could not read photos: ${e.message}` });
     }
     reloadSuggestions();
   }

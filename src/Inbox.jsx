@@ -64,6 +64,12 @@ export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onR
               ? 'Inkmap reads where and when each photo on this phone was taken, and suggests the cities. Only the place and date are kept; your photos never leave the phone and are not copied.'
               : 'Pick photos and Inkmap reads where and when each one was taken, and suggests the cities. Only the place and date are kept; the photos are not copied.'}
           </p>
+          {scansLibrary && (
+            <>
+              <p className="hint">Photos missing? Some phones hide part of the camera roll from other apps. Pick the folder itself (usually DCIM, then Camera) and Inkmap reads every file in it.</p>
+              <button className="secondary" onClick={() => onScan('folder')}>Choose a folder</button>
+            </>
+          )}
           <button className="primary" onClick={start}>{scansLibrary ? 'Look through my photos' : 'Choose photos'}</button>
         </div>
       )}

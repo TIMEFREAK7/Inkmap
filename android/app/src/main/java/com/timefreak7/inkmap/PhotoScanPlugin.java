@@ -2,6 +2,10 @@ package com.timefreak7.inkmap;
 
 import android.Manifest;
 import android.content.ContentUris;
+import android.content.Intent;
+import android.provider.DocumentsContract;
+import androidx.activity.result.ActivityResult;
+import com.getcapacitor.annotation.ActivityCallback;
 import android.database.Cursor;
 import android.media.ExifInterface;
 import android.media.MediaMetadataRetriever;
@@ -71,7 +75,7 @@ public class PhotoScanPlugin extends Plugin {
             if (videos) collections.add(MediaStore.Video.Media.getContentUri(v));
         }
         String[] projection = { MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_ADDED };
-        String where = MediaStore.MediaColumns.DATE_ADDED + " > ?";
+        String where = "(" + MediaStore.MediaColumns.DATE_ADDED + " > ? OR " + MediaStore.MediaColumns.DATE_ADDED + " IS NULL)";
         String[] args = { String.valueOf(after) };
 
         int total = 0;
@@ -100,17 +104,9 @@ public class PhotoScanPlugin extends Plugin {
                     Uri uri = ContentUris.withAppendedId(collection, c.getLong(0));
                     // Without setRequireOriginal Android hands back a copy with the location removed.
                     if (Build.VERSION.SDK_INT >= 29) uri = MediaStore.setRequireOriginal(uri);
-                    ExifInterface exif = isVideo ? null : exif(uri);
-                    double[] at = isVideo ? videoPoint(uri) : photoPoint(exif);
-                    if (at == null || (at[0] == 0 && at[1] == 0)) continue;
-                    String day = isVideo ? null : photoDay(exif);
-                    if (day == null && c.getLong(1) > 0) day = localDay(c.getLong(1));
-                    if (day == null) continue;
+                    JSObject pt = point(uri, isVideo, c.getLong(1));
+                    if (pt == null) continue;
                     located++;
-                    JSObject pt = new JSObject();
-                    pt.put("lat", at[0]);
-                    pt.put("lon", at[1]);
-                    pt.put("day", day);
                     points.put(pt);
                 }
             } catch (SecurityException e) {
@@ -125,6 +121,92 @@ public class PhotoScanPlugin extends Plugin {
         result.put("videos", vids);
         result.put("located", located);
         call.resolve(result);
+    }
+
+    // { lat, lon, day } for one photo or video, or null without a location. fallbackMillis: a timestamp for the day.
+    private JSObject point(Uri uri, boolean isVideo, long fallbackMillis) {
+        ExifInterface exif = isVideo ? null : exif(uri);
+        double[] at = isVideo ? videoPoint(uri) : photoPoint(exif);
+        if (at == null || (at[0] == 0 && at[1] == 0)) return null;
+        String day = isVideo ? null : photoDay(exif);
+        if (day == null && fallbackMillis > 0) day = localDay(fallbackMillis);
+        if (day == null) return null;
+        JSObject pt = new JSObject();
+        pt.put("lat", at[0]);
+        pt.put("lon", at[1]);
+        pt.put("day", day);
+        return pt;
+    }
+
+    // A folder the person picks (e.g. DCIM/Camera), read file by file through the system folder picker.
+    // Some phones leave many camera files out of the media index the library scan uses; this reads them anyway.
+    @PluginMethod
+    public void scanFolder(PluginCall call) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (Build.VERSION.SDK_INT >= 26) {
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
+                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:DCIM"));
+        }
+        startActivityForResult(call, intent, "afterFolder");
+    }
+
+    @ActivityCallback
+    private void afterFolder(PluginCall call, ActivityResult result) {
+        Uri tree = result.getData() == null ? null : result.getData().getData();
+        if (tree == null) {
+            call.reject("No folder chosen");
+            return;
+        }
+        new Thread(() -> runFolder(call, tree)).start();
+    }
+
+    private void runFolder(PluginCall call, Uri tree) {
+        List<String[]> files = new ArrayList<>(); // documentId, mime, lastModified
+        try {
+            list(tree, DocumentsContract.getTreeDocumentId(tree), files, 0);
+        } catch (Exception e) {
+            call.reject("Could not read that folder: " + e.getMessage());
+            return;
+        }
+        JSArray points = new JSArray();
+        int done = 0, photos = 0, vids = 0, located = 0;
+        for (String[] f : files) {
+            done++;
+            boolean isVideo = f[1].startsWith("video/");
+            if (isVideo) vids++; else photos++;
+            if (done % 50 == 0) {
+                JSObject p = new JSObject();
+                p.put("done", done);
+                p.put("total", files.size());
+                notifyListeners("progress", p);
+            }
+            JSObject pt = point(DocumentsContract.buildDocumentUriUsingTree(tree, f[0]), isVideo, Long.parseLong(f[2]));
+            if (pt == null) continue;
+            located++;
+            points.put(pt);
+        }
+        JSObject result = new JSObject();
+        result.put("points", points);
+        result.put("photos", photos);
+        result.put("videos", vids);
+        result.put("located", located);
+        call.resolve(result);
+    }
+
+    private void list(Uri tree, String docId, List<String[]> out, int depth) {
+        if (depth > 8) return;
+        String[] cols = { DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED, DocumentsContract.Document.COLUMN_DISPLAY_NAME };
+        try (Cursor c = getContext().getContentResolver().query(DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId), cols, null, null, null)) {
+            while (c != null && c.moveToNext()) {
+                String id = c.getString(0), mime = c.getString(1);
+                String name = c.getString(3);
+                if (name != null && name.startsWith(".")) continue; // .thumbnails, .trash and other hidden folders
+                if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mime)) list(tree, id, out, depth + 1);
+                else if (mime != null && (mime.startsWith("image/") || mime.startsWith("video/"))) out.add(new String[] { id, mime, String.valueOf(c.getLong(2)) });
+            }
+        }
     }
 
     private ExifInterface exif(Uri uri) {

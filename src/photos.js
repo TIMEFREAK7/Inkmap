@@ -10,10 +10,11 @@ import { unseenTrips } from './backfill.js';
 // Android scans the whole library (the photo picker strips location); elsewhere the person picks files.
 export const scansLibrary = Capacitor.isNativePlatform();
 
-async function readLibrary(after, onProgress) {
+// folder: read a folder the person picks instead of the media index (which can miss files on some phones).
+async function readLibrary(after, folder, onProgress) {
   const listener = await PhotoScan.addListener('progress', onProgress);
   try {
-    return await PhotoScan.scan({ after });
+    return await (folder ? PhotoScan.scanFolder() : PhotoScan.scan({ after }));
   } finally {
     listener.remove();
   }
@@ -33,12 +34,13 @@ async function readFiles(files, onProgress) {
   return { points, photos: files.length, videos: 0, located: points.length };
 }
 
-// files: picked files on web/desktop; on Android null (photos added since the last scan).
-export async function findPhotoTrips(places, countries, files, onProgress) {
+// source: picked files on web/desktop; on Android 'folder' (a picked folder) or null (photos added since the last scan).
+export async function findPhotoTrips(places, countries, source, onProgress) {
+  const files = Array.isArray(source) ? source : null;
   // v2: videos and SD cards were added, so the first scan with them reads everything again (duplicates are dropped).
   const last = (await db.settings.get('photoScan.v2'))?.value;
   const home = (await db.settings.get('home'))?.value;
-  const read = files ? await readFiles(files, onProgress) : await readLibrary(last?.lastAdded ?? 0, onProgress);
+  const read = files ? await readFiles(files, onProgress) : await readLibrary(last?.lastAdded ?? 0, source === 'folder', onProgress);
   const { trips } = await places.trips(read.points, home);
   const fresh = unseenTrips(trips, await db.visits.toArray(), await db.suggestions.toArray());
   await db.suggestions.bulkAdd(fresh.map(t => ({
@@ -46,6 +48,6 @@ export async function findPhotoTrips(places, countries, files, onProgress) {
     status: 'pending',
     photos: t.photos,
   })));
-  if (!files) await db.settings.put({ key: 'photoScan.v2', value: { lastAdded: read.lastAdded, at: new Date().toISOString() } });
+  if (!source) await db.settings.put({ key: 'photoScan.v2', value: { lastAdded: read.lastAdded, at: new Date().toISOString() } });
   return { photos: read.photos, videos: read.videos, located: read.located, found: fresh.length };
 }
