@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { useSheetDrag } from './sheet.jsx';
 import { BackupFolder } from './native.js';
 import { hasBackupFolder, backupNow } from './backup.js';
 import { COLOURS } from './Onboarding.jsx';
 import { loadBoundarySources } from './data.js';
 
-export default function Settings({ profile, backup, onSaveProfile, onClose }) {
+export default function Settings({ profile, backup, onSaveProfile, onClose, showFps, onShowFps }) {
+  const drag = useSheetDrag(onClose);
   const [name, setName] = useState(profile.name);
   const [folder, setFolder] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -26,8 +28,9 @@ export default function Settings({ profile, backup, onSaveProfile, onClose }) {
   }
 
   return (
-    <motion.div className="sheet" role="dialog" aria-label="Settings"
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Settings"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
+      {drag.handle}
       <div className="sheet-head">
         <h1 className="title small">Settings</h1>
         <button className="text-button" onClick={onClose}>Done</button>
@@ -82,7 +85,11 @@ export default function Settings({ profile, backup, onSaveProfile, onClose }) {
               </ul>
             )}
           </details>
-          <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source.</p>
+          <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source. Fonts: Inter and Space Grotesk (SIL Open Font License).</p>
+          <label className="check">
+            <input type="checkbox" checked={showFps} onChange={e => onShowFps(e.target.checked)} />
+            Show frame rate (for testing a phone)
+          </label>
         </section>
       </div>
     </motion.div>

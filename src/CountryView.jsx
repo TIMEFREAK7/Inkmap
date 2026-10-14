@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import { motion } from 'motion/react';
+import { useSheetDrag } from './sheet.jsx';
 import { loadRegions } from './data.js';
 import { fitBox, areaFor, bboxOf } from './geo.js';
 import { describeDates } from './visits.js';
 
 // One country on a flat map: visited states shaded, visited cities as pins, and the list of visits.
 export default function CountryView({ code, countries, visits, colour, onEdit, onClose }) {
+  const drag = useSheetDrag(onClose);
   const el = useRef(null);
   const [areas, setAreas] = useState({}); // visit id -> 'District, State', once boundaries load
   const mapRef = useRef(null);
@@ -73,8 +75,9 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
   const cities = new Set(mine.filter(v => v.exitedAirport).map(v => v.geonameId)).size;
 
   return (
-    <motion.div className="sheet country" role="dialog" aria-label={country?.name}
+    <motion.div className="sheet country" {...drag.sheet} role="dialog" aria-label={country?.name}
       initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.25 }}>
+      {drag.handle}
       <div className="sheet-head">
         <h1 className="title small">{country?.name}</h1>
         <button className="text-button" onClick={onClose}>Close</button>

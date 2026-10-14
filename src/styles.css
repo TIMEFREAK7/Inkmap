@@ -13,7 +13,9 @@
 * { box-sizing: border-box; }
 /* clip, not hidden: hidden still lets the browser scroll the app programmatically (e.g. to a focused input). */
 html, body, #root, main { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: clip; }
-body { font: 16px/1.4 system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+body { font: 16px/1.4 'Inter Variable', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+/* Numbers in Space Grotesk (bundled, no font request at runtime). */
+.counter-value, .tile-value, .ring-text, .friend-id, .odo { font-family: 'Space Grotesk', 'Inter Variable', sans-serif; }
 button { font: inherit; color: inherit; }
 
 .globe { position: absolute; inset: 0; }
@@ -136,7 +138,7 @@ button { font: inherit; color: inherit; }
 .me { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
 .me-name { font-size: 22px; font-weight: 700; }
 .label { color: var(--muted); font-weight: 600; }
-.friend-id { font: 700 28px/1.2 ui-monospace, monospace; letter-spacing: 1px; }
+.friend-id { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: 1px; }
 .card .hint { margin: 0; }
 
 /* Bottom navigation: tabs either side of the add button, all in the thumb zone. */
@@ -191,3 +193,20 @@ button { font: inherit; color: inherit; }
 details summary { list-style: none; padding-left: 0; display: flex; align-items: center; }
 .country .results li { display: flex; align-items: center; }
 .country .results .result { flex: 1; min-width: 0; }
+
+/* Odometer: each digit is a 0-9 strip that slides to the current digit. */
+.odo { display: inline-flex; line-height: 1.2em; height: 1.2em; overflow: hidden; }
+.odo-col { display: inline-block; height: 1.2em; overflow: hidden; }
+.odo-strip { display: flex; flex-direction: column; }
+.odo-strip span { height: 1.2em; }
+
+/* Launch: the globe fades in from black. */
+.globe { opacity: 0; transition: opacity 900ms ease-out; }
+.globe.ready { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .globe { transition: none; } }
+
+/* Drag handle at the top of every sheet. */
+.handle { display: flex; justify-content: center; padding: 4px 0 10px; margin-top: -8px; touch-action: none; cursor: grab; }
+.handle span { width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); }
+.check { display: flex; align-items: center; gap: 12px; min-height: 48px; }
+.check input { width: 24px; height: 24px; accent-color: var(--accent); }

@@ -29,6 +29,8 @@ export default function App() {
   const [tab, setTab] = useState('globe');
   const [country, setCountry] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [start, setStart] = useState(undefined); // where the globe faced last time; undefined while loading
+  const [showFps, setShowFps] = useState(() => { try { return localStorage.getItem('inkmap.fps') === '1'; } catch { return false; } });
 
   const reload = () => db.visits.orderBy('createdAt').reverse().toArray().then(setVisits);
   const loadProfile = () => db.profile.toCollection().first().then(p => setProfile(p ?? null));
@@ -38,7 +40,9 @@ export default function App() {
     onBackupResult(setBackup);
     loadProfile();
     reload();
+    db.settings.get('lastCenter').then(r => setStart(r?.value ?? null));
   }, []);
+  const saveCenter = c => db.settings.put({ key: 'lastCenter', value: c });
 
   const s = useMemo(() => stats(visits, countries?.list.length), [visits, countries]);
   // Recent places for the empty search: newest first, each place once.
@@ -123,8 +127,8 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <main>
-        {countries && <Globe geo={countries.geo} visited={s.visitedCodes} colour={profile.colour} focus={focus}
-          paused={tab !== 'globe' || !!country || adding || settings} onCountry={setCountry} />}
+        {countries && start !== undefined && <Globe geo={countries.geo} visited={s.visitedCodes} colour={profile.colour} focus={focus}
+          start={start} onLeave={saveCenter} paused={tab !== 'globe' || !!country || adding || settings} onCountry={setCountry} />}
         <button className="avatar" style={{ background: profile.colour }} aria-label="Settings and backup" onClick={() => setSettings(true)}>
           {profile.name[0]?.toUpperCase()}
         </button>
@@ -134,7 +138,7 @@ export default function App() {
           <Counter value={s.countries} label={s.countries === 1 ? 'country' : 'countries'} />
           <Counter value={s.cities} label={s.cities === 1 ? 'city' : 'cities'} />
         </header>
-        <FpsMeter />
+        {showFps && <FpsMeter />}
         {error && <p className="error" role="alert">Something went wrong loading the map data: {String(error)}</p>}
         {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} />}
 
@@ -152,7 +156,8 @@ export default function App() {
           {country && <CountryView key={country} code={country} countries={countries} visits={visits} colour={profile.colour}
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
-          {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)} />}
+          {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
+            showFps={showFps} onShowFps={on => { setShowFps(on); try { localStorage.setItem('inkmap.fps', on ? '1' : '0'); } catch { /* private mode */ } }} />}
         </AnimatePresence>
 
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
@@ -172,8 +177,24 @@ export default function App() {
 function Counter({ value, label }) {
   return (
     <div className="counter">
-      <motion.span key={value} className="counter-value" initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{value}</motion.span>
+      <Odometer value={value} />
       <span className="counter-label">{label}</span>
     </div>
+  );
+}
+
+// Digits roll like an odometer when a count changes. Columns are keyed from the right so the units digit keeps rolling.
+function Odometer({ value }) {
+  const digits = String(value).split('');
+  return (
+    <span className="counter-value odo" aria-label={String(value)}>
+      {digits.map((d, i) => (
+        <span key={digits.length - i} className="odo-col" aria-hidden="true">
+          <motion.span className="odo-strip" initial={false} animate={{ y: `${-d * 10}%` }} transition={{ type: 'spring', stiffness: 140, damping: 22 }}>
+            {'0123456789'.split('').map(n => <span key={n}>{n}</span>)}
+          </motion.span>
+        </span>
+      ))}
+    </span>
   );
 }

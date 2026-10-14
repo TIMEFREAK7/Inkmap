@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { useSheetDrag } from './sheet.jsx';
 import DateFields from './DateFields.jsx';
 
 export default function EditVisit({ visit, where, onSave, onDelete, onClose }) {
+  const drag = useSheetDrag(onClose);
   const [from, setFrom] = useState(visit.dateFrom);
   const [to, setTo] = useState(visit.dateTo || '');
   const [note, setNote] = useState(visit.note || '');
 
   return (
-    <motion.div className="sheet" role="dialog" aria-label={`Edit ${visit.name}`}
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label={`Edit ${visit.name}`}
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
+      {drag.handle}
       <div className="confirm">
         <button className="text-button back" onClick={onClose}>‹ Back</button>
         <h2 className="confirm-name">{visit.name}</h2>

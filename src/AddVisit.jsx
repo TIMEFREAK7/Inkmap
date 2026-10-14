@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { useSheetDrag } from './sheet.jsx';
 
 import { today } from './dates.js';
 import DateFields from './DateFields.jsx';
 
 // Search-first logging: type, pick, save. The date defaults to today.
 export default function AddVisit({ places, countries, recent, onSave, onClose }) {
+  const drag = useSheetDrag(onClose);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [picked, setPicked] = useState(null);
@@ -24,11 +26,12 @@ export default function AddVisit({ places, countries, recent, onSave, onClose })
   const list = query.trim() ? results : recent;
 
   return (
-    <motion.div className="sheet" role="dialog" aria-label="Add a place"
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Add a place"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
       transition={{ type: 'spring', stiffness: 400, damping: 40 }}
       // Focus only once the sheet is on screen; focusing mid-slide makes the browser scroll the whole app.
       onAnimationComplete={() => input.current?.focus({ preventScroll: true })}>
+      {drag.handle}
       {!picked ? (
         <>
           <div className="search-row">

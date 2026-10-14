@@ -36,7 +36,7 @@ function style(geo, visited, colour) {
 }
 
 // focus: { lon, lat } of a place just logged; the camera flies there and the new fill lands with it.
-export default function Globe({ geo, visited, colour, focus, paused, onCountry }) {
+export default function Globe({ geo, visited, colour, focus, paused, onCountry, start, onLeave }) {
   const el = useRef(null);
   const mapRef = useRef(null);
   const touchRef = useRef(null);
@@ -44,10 +44,13 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry }
   const pausedRef = useRef(paused);
   const onCountryRef = useRef(onCountry);
   onCountryRef.current = onCountry;
+  const onLeaveRef = useRef(onLeave);
+  onLeaveRef.current = onLeave;
 
   useEffect(() => {
     const map = new MapLibreMap({
-      container: el.current, style: style(geo, visited, colour), center: [78, 20], zoom: 1.6,
+      // Launch: start turned a quarter away from where the person last looked, then turn to face it.
+      container: el.current, style: style(geo, visited, colour), center: [(start?.[0] ?? 78) + 90, start?.[1] ?? 20], zoom: 1.6,
       attributionControl: false, renderWorldCopies: false,
       // Phones report 3-4x; past 2x the extra pixels cost GPU time without a visible difference on the globe.
       pixelRatio: Math.min(devicePixelRatio, 2),
@@ -86,8 +89,15 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry }
     map.on('mousedown', touch);
     map.on('touchstart', touch);
     map.on('wheel', touch);
-    map.on('load', startSpin);
-    return () => { stopSpin(); map.remove(); };
+    map.on('load', () => {
+      el.current?.classList.add('ready'); // fade in from black
+      map.easeTo({ center: start ?? [78, 20], duration: 1600, easing: t => 1 - (1 - t) ** 3 });
+      startSpin();
+    });
+    // Remember where the globe faced, for the next launch.
+    const leave = () => { if (document.hidden) { const c = map.getCenter(); onLeaveRef.current?.([c.lng, c.lat]); } };
+    document.addEventListener('visibilitychange', leave);
+    return () => { document.removeEventListener('visibilitychange', leave); stopSpin(); map.remove(); };
     // The map is built once; visited/colour/focus changes are applied by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo]);
