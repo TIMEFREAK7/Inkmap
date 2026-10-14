@@ -64,6 +64,7 @@ Vercel deploys `main` (framework preset: Vite, output `dist`). A service worker 
 | Capacitor (core, android), Electron, electron-builder | MIT |
 | mapshaper (build-time only) | MPL-2.0 |
 | Inter, Space Grotesk fonts (Fontsource) | SIL OFL 1.1 |
+| flag-icons | MIT |
 | GeoNames data | CC BY 4.0 — © GeoNames, geonames.org |
 | Natural Earth data | Public domain |
 | geoBoundaries (gbOpen) | Per country: CC BY, ODbL, OGL, Etalab, public domain and others, all open; full list in `public/data/boundary-sources.json` |

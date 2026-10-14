@@ -58,3 +58,14 @@ export function describeDates(v) {
   const days = Math.round((Date.parse(v.dateTo) - Date.parse(v.dateFrom)) / 86400000) + 1;
   return `${fmt(v.dateFrom)} – ${fmt(v.dateTo)} · ${days} days`;
 }
+
+// One stamp per visited country, in the order the countries were first visited (layovers don't earn stamps).
+export function passportStamps(visits) {
+  const first = new Map();
+  for (const v of visits) {
+    if (!v.exitedAirport) continue;
+    const had = first.get(v.countryCode);
+    if (!had || v.dateFrom < had.first) first.set(v.countryCode, { code: v.countryCode, continent: v.continent, first: v.dateFrom });
+  }
+  return [...first.values()].sort((a, b) => a.first.localeCompare(b.first) || a.code.localeCompare(b.code));
+}

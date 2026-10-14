@@ -85,7 +85,7 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, show
               </ul>
             )}
           </details>
-          <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source. Fonts: Inter and Space Grotesk (SIL Open Font License).</p>
+          <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source. Fonts: Inter and Space Grotesk (SIL Open Font License). Flags: flag-icons (MIT).</p>
           <label className="check">
             <input type="checkbox" checked={showFps} onChange={e => onShowFps(e.target.checked)} />
             Show frame rate (for testing a phone)

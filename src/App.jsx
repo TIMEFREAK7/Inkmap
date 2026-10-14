@@ -9,6 +9,8 @@ import Stats from './Stats.jsx';
 import CountryView from './CountryView.jsx';
 import EditVisit from './EditVisit.jsx';
 import Family from './Family.jsx';
+import Passport from './Passport.jsx';
+import Celebrate from './Celebrate.jsx';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
 import { db } from './db.js';
@@ -31,6 +33,7 @@ export default function App() {
   const [tab, setTab] = useState('globe');
   const [country, setCountry] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [celebrate, setCelebrate] = useState(null); // new country / continent just logged
   const [start, setStart] = useState(undefined); // where the globe faced last time; undefined while loading
   const [showFps, setShowFps] = useState(() => { try { return localStorage.getItem('inkmap.fps') === '1'; } catch { return false; } });
 
@@ -58,7 +61,11 @@ export default function App() {
 
   async function save(place, date, dateTo) {
     const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo });
+    const counted = visits.filter(v => v.exitedAirport);
+    const newCountry = !counted.some(v => v.countryCode === visit.countryCode);
+    const newContinent = !counted.some(v => v.continent === visit.continent);
     await db.visits.add(visit);
+    if (newCountry) setCelebrate({ code: visit.countryCode, continent: visit.continent, first: visit.dateFrom, newCountry, newContinent });
     scheduleBackup();
     setAdding(false);
     setFocus({ lon: place.lon, lat: place.lat });
@@ -145,6 +152,7 @@ export default function App() {
         {showFps && <FpsMeter />}
         {error && <p className="error" role="alert">Something went wrong loading the map data: {String(error)}</p>}
         {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} />}
+        {tab === 'passport' && countries && <Passport profile={profile} visits={visits} family={family} countries={countries} />}
         {tab === 'family' && countries && <Family profile={profile} visits={visits} family={family} countries={countries} onChanged={reloadFamily} />}
 
         <div className="bottom">
@@ -154,6 +162,7 @@ export default function App() {
             <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
             <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
             <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family'} onClick={() => setTab('family')}>Family</button>
+            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport'} onClick={() => setTab('passport')}>Passport</button>
           </nav>
         </div>
 
@@ -165,6 +174,8 @@ export default function App() {
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
             showFps={showFps} onShowFps={on => { setShowFps(on); try { localStorage.setItem('inkmap.fps', on ? '1' : '0'); } catch { /* private mode */ } }} />}
         </AnimatePresence>
+
+        {countries && <Celebrate event={celebrate} countries={countries} onDone={() => setCelebrate(null)} />}
 
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
         <AnimatePresence>

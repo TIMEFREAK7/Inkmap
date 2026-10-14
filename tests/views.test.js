@@ -87,3 +87,12 @@ describe('country view framing', () => {
   });
 });
 
+
+import { passportStamps } from '../src/visits.js';
+describe('passport', () => {
+  it('has one stamp per country, in order of first visit, without layovers', () => {
+    const v = (countryCode, dateFrom, exitedAirport = true) => ({ countryCode, continent: 'Asia', dateFrom, exitedAirport });
+    const stamps = passportStamps([v('IN', '2024-05-01'), v('TR', '2022-01-10'), v('IN', '2019-03-02'), v('AE', '2018-01-01', false)]);
+    expect(stamps.map(s => [s.code, s.first])).toEqual([['IN', '2019-03-02'], ['TR', '2022-01-10']]);
+  });
+});
