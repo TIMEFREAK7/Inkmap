@@ -14,6 +14,6 @@ self.onmessage = async ({ data }) => {
   } else if (data.type === 'trips') {
     placeGrid ||= gridOf(index.places);
     airportGrid ||= gridOf(parseAirports(await fetch(data.airportsUrl).then(r => r.text())));
-    self.postMessage({ id: data.id, ...photoTrips(data.points, placeGrid, airportGrid) });
+    self.postMessage({ id: data.id, ...photoTrips(data.points, placeGrid, airportGrid, data.home) });
   }
 };

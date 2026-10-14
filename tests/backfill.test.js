@@ -30,6 +30,12 @@ describe('photo trips', () => {
       ['Paris', '2024-05-01', '2024-05-02', 3],
     ]);
   });
+  it('skips photos around the home town, suburbs included', () => {
+    const pune = { lat: 18.5196, lon: 73.8553 };
+    const r = photoTrips([pt(18.5204, 73.8567, '2024-01-01'), pt(18.6298, 73.7997, '2024-01-02'), pt(18.94, 72.835, '2024-01-03')], places, airports, pune);
+    expect(r.trips.map(t => t.place.name)).toEqual(['Mumbai']);
+    expect(r.skipped).toBe(2);
+  });
   it('drops trips already logged or already suggested', () => {
     const paris = trips[0].place.id;
     expect(unseenTrips(trips, [{ geonameId: paris, dateFrom: '2024-05-02' }], [])).toHaveLength(1);

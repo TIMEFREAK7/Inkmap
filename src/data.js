@@ -55,8 +55,8 @@ export function startPlaces() {
   return ask({ type: 'load', url: new URL(url('places.tsv'), document.baseURI).href }).then(({ count, ms }) => ({
     count, ms,
     search: query => ask({ type: 'search', query }).then(r => r.results),
-    // points: [{ lat, lon, day }] from photos -> { trips, skipped } (see backfill.js)
-    trips: points => ask({ type: 'trips', points, airportsUrl: new URL(url('airports.tsv'), document.baseURI).href }),
+    // points: [{ lat, lon, day }] from photos, home: { lat, lon } or null -> { trips, skipped } (see backfill.js)
+    trips: (points, home) => ask({ type: 'trips', points, home, airportsUrl: new URL(url('airports.tsv'), document.baseURI).href }),
   }));
 }
 

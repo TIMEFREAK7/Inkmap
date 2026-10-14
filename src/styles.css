@@ -287,3 +287,5 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 .deck-buttons button { flex: 1; margin: 0; }
 .inbox-empty { display: flex; flex-direction: column; flex: 1; gap: 8px; margin-top: 16px; }
 .inbox-empty p { margin: 0 4px; font-size: 18px; }
+.home-button { align-self: center; margin-top: 4px; }
+.scan-summary { margin: 8px 4px 0; }

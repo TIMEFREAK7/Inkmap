@@ -13,6 +13,7 @@ import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
 import Inbox from './Inbox.jsx';
 import { findPhotoTrips } from './photos.js';
+import { km, HOME_KM } from './backfill.js';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
 import { db } from './db.js';
@@ -38,7 +39,7 @@ export default function App() {
   const [celebrate, setCelebrate] = useState(null); // new country / continent just logged
   const [inbox, setInbox] = useState(false);
   const [suggestions, setSuggestions] = useState([]); // pending, newest trip first
-  const [scan, setScan] = useState(null); // photo scan: { running, done, total } then { found, scanned } or { error }
+  const [scan, setScan] = useState(null); // photo scan: { running, done, total } then { photos, videos, located, found } or { error }
   const [start, setStart] = useState(undefined); // where the globe faced last time; undefined while loading
   const [showFps, setShowFps] = useState(() => { try { return localStorage.getItem('inkmap.fps') === '1'; } catch { return false; } });
 
@@ -102,6 +103,28 @@ export default function App() {
     const visit = await save(place, sg.dateFrom, sg.dateTo, sg.source);
     reloadSuggestions();
     setUndo({ text: `Added ${sg.name}`, run: () => Promise.all([db.visits.delete(visit.id), db.suggestions.update(sg.id, { status: 'pending' })]) });
+  }
+
+  // Home town: its photos are everyday life, so they are skipped from now on. It still counts once as a place you've been.
+  async function setHome(sg) {
+    const home = { geonameId: sg.geonameId, name: sg.name, lat: sg.lat, lon: sg.lon };
+    const around = suggestions.filter(x => km(x.lat, x.lon, home.lat, home.lon) < HOME_KM);
+    await db.settings.put({ key: 'home', value: home });
+    await db.suggestions.bulkUpdate(around.map(x => ({ key: x.id, changes: { status: 'rejected' } })));
+    const logged = visits.some(v => v.geonameId === sg.geonameId);
+    const first = around.filter(x => x.geonameId === sg.geonameId).reduce((a, x) => (x.dateFrom < a.dateFrom ? x : a), sg);
+    const place = { id: sg.geonameId, name: sg.name, cc: sg.countryCode, admin1: sg.admin1Code, lat: sg.lat, lon: sg.lon };
+    const visit = logged ? null : await save(place, first.dateFrom, undefined, 'photo');
+    scheduleBackup();
+    reloadSuggestions();
+    setUndo({
+      text: `Home set to ${sg.name}`,
+      run: () => Promise.all([
+        db.settings.delete('home'),
+        db.suggestions.bulkUpdate(around.map(x => ({ key: x.id, changes: { status: 'pending' } }))),
+        visit && db.visits.delete(visit.id),
+      ]),
+    });
   }
 
   async function rejectSuggestion(sg) {
@@ -217,7 +240,7 @@ export default function App() {
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
           {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos}
-            onConfirm={confirmSuggestion} onReject={rejectSuggestion} onClose={() => setInbox(false)} />}
+            onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onClose={() => setInbox(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
             onPhotos={() => { setSettings(false); setInbox(true); }}
             showFps={showFps} onShowFps={on => { setShowFps(on); try { localStorage.setItem('inkmap.fps', on ? '1' : '0'); } catch { /* private mode */ } }} />}

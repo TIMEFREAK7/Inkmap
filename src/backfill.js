@@ -2,9 +2,10 @@
 import { addDays } from './dates.js';
 
 export const AIRPORT_KM = 3; // photos this close to an airport are skipped: a layover is not a visit
+export const HOME_KM = 25; // photos around your home town (suburbs included) are everyday life, not trips
 const REACH_KM = 25;
 
-const km = (aLat, aLon, bLat, bLon) => {
+export const km = (aLat, aLon, bLat, bLon) => {
   const x = ((bLon - aLon) * Math.PI / 180) * Math.cos(((aLat + bLat) / 2) * Math.PI / 180);
   const y = (bLat - aLat) * Math.PI / 180;
   return Math.hypot(x, y) * 6371;
@@ -48,10 +49,11 @@ export function cityAt(places, lat, lon) {
 }
 
 // One trip per city per run of consecutive days with photos there.
-export function photoTrips(points, places, airports) {
+export function photoTrips(points, places, airports, home) {
   const byCity = new Map();
   let skipped = 0;
   for (const pt of points) {
+    if (home && km(pt.lat, pt.lon, home.lat, home.lon) < HOME_KM) { skipped++; continue; }
     if (nearAirport(airports, pt.lat, pt.lon)) { skipped++; continue; }
     const place = cityAt(places, pt.lat, pt.lon);
     if (!place) { skipped++; continue; }

@@ -8,7 +8,7 @@ import { scansLibrary } from './photos.js';
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // Suggestions inbox: one card at a time. Swipe right (or tap Yes) to add it as a visit, left (or Not me) to drop it.
-export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onReject, onClose }) {
+export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onReject, onHome, onClose }) {
   const drag = useSheetDrag(onClose);
   const fileRef = useRef(null);
   const [top, next] = suggestions;
@@ -35,6 +35,12 @@ export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onR
         </div>
       )}
       {scan?.error && <p className="warn" role="alert">{scan.error}</p>}
+      {scan?.found != null && (
+        <p className="hint scan-summary">
+          Read {plural(scan.photos, 'photo', 'photos')}{scan.videos ? ` and ${plural(scan.videos, 'video', 'videos')}` : ''}
+          {' · '}{scan.located} with a location{' · '}{plural(scan.found, 'new place', 'new places')}
+        </p>
+      )}
 
       {top ? (
         <>
@@ -47,10 +53,11 @@ export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onR
             <button className="secondary" onClick={() => onReject(top)}>Not me</button>
             <button className="primary" onClick={() => onConfirm(top)}>Yes, I was there</button>
           </div>
+          <button className="text-button home-button" onClick={() => onHome(top)}>I live in {top.name}</button>
         </>
       ) : !scan?.running && (
         <div className="inbox-empty">
-          {scan?.found === 0 && <p>No new places found{scan.scanned ? ` in ${plural(scan.scanned, 'photo', 'photos')}` : ''}.</p>}
+          {scan?.found === 0 && <p>No new places found.</p>}
           {scan?.found > 0 && <p>All done. Every place has been checked.</p>}
           <p className="hint">
             {scansLibrary

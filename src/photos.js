@@ -30,20 +30,22 @@ async function readFiles(files, onProgress) {
     } catch { /* not a photo, or no readable data */ }
     if (i % 20 === 19) onProgress({ done: i + 1, total: files.length });
   }
-  return { points, scanned: files.length };
+  return { points, photos: files.length, videos: 0, located: points.length };
 }
 
 // files: picked files on web/desktop; on Android null (photos added since the last scan).
 export async function findPhotoTrips(places, countries, files, onProgress) {
-  const last = (await db.settings.get('photoScan'))?.value;
+  // v2: videos and SD cards were added, so the first scan with them reads everything again (duplicates are dropped).
+  const last = (await db.settings.get('photoScan.v2'))?.value;
+  const home = (await db.settings.get('home'))?.value;
   const read = files ? await readFiles(files, onProgress) : await readLibrary(last?.lastAdded ?? 0, onProgress);
-  const { trips } = await places.trips(read.points);
+  const { trips } = await places.trips(read.points, home);
   const fresh = unseenTrips(trips, await db.visits.toArray(), await db.suggestions.toArray());
   await db.suggestions.bulkAdd(fresh.map(t => ({
     ...makeVisit(t.place, countries.byCode[t.place.cc], { date: t.dateFrom, dateTo: t.dateTo === t.dateFrom ? undefined : t.dateTo, source: 'photo' }),
     status: 'pending',
     photos: t.photos,
   })));
-  if (!files) await db.settings.put({ key: 'photoScan', value: { lastAdded: read.lastAdded, at: new Date().toISOString() } });
-  return { scanned: read.scanned, found: fresh.length };
+  if (!files) await db.settings.put({ key: 'photoScan.v2', value: { lastAdded: read.lastAdded, at: new Date().toISOString() } });
+  return { photos: read.photos, videos: read.videos, located: read.located, found: fresh.length };
 }

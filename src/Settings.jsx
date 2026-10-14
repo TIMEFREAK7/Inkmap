@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
 import { BackupFolder } from './native.js';
-import { hasBackupFolder, backupNow } from './backup.js';
+import { hasBackupFolder, backupNow, scheduleBackup } from './backup.js';
 import { COLOURS } from './Onboarding.jsx';
 import { loadBoundarySources } from './data.js';
+import { db } from './db.js';
 
 export default function Settings({ profile, backup, onSaveProfile, onClose, onPhotos, showFps, onShowFps }) {
   const drag = useSheetDrag(onClose);
@@ -12,7 +13,9 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
   const [folder, setFolder] = useState(null);
   const [copied, setCopied] = useState(false);
   const [sources, setSources] = useState(null);
+  const [home, setHome] = useState(null);
 
+  useEffect(() => { db.settings.get('home').then(r => setHome(r?.value ?? null)); }, []);
   useEffect(() => { if (hasBackupFolder) BackupFolder.current().then(f => setFolder(f.name ? f : null), () => {}); }, []);
 
   async function copyId() {
@@ -74,6 +77,11 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
         <section className="card">
           <p className="label">Places from your photos</p>
           <p className="hint">Find cities you've been to from where and when your photos were taken. You check each one before it's added.</p>
+          {home && (
+            <p>Home town: <b>{home.name}</b>. Photos taken around it are skipped.{' '}
+              <button className="text-button" onClick={async () => { await db.settings.delete('home'); scheduleBackup(); setHome(null); }}>Clear</button>
+            </p>
+          )}
           <button className="secondary" onClick={onPhotos}>Find places in my photos</button>
         </section>
 
