@@ -11,6 +11,8 @@ import EditVisit from './EditVisit.jsx';
 import Family from './Family.jsx';
 import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
+import Inbox from './Inbox.jsx';
+import { findPhotoTrips } from './photos.js';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
 import { db } from './db.js';
@@ -34,10 +36,15 @@ export default function App() {
   const [country, setCountry] = useState(null);
   const [editing, setEditing] = useState(null);
   const [celebrate, setCelebrate] = useState(null); // new country / continent just logged
+  const [inbox, setInbox] = useState(false);
+  const [suggestions, setSuggestions] = useState([]); // pending, newest trip first
+  const [scan, setScan] = useState(null); // photo scan: { running, done, total } then { found, scanned } or { error }
   const [start, setStart] = useState(undefined); // where the globe faced last time; undefined while loading
   const [showFps, setShowFps] = useState(() => { try { return localStorage.getItem('inkmap.fps') === '1'; } catch { return false; } });
 
   const reload = () => db.visits.orderBy('createdAt').reverse().toArray().then(setVisits);
+  const reloadSuggestions = () => db.suggestions.where('status').equals('pending').toArray()
+    .then(l => setSuggestions(l.sort((a, b) => b.dateFrom.localeCompare(a.dateFrom))));
   const reloadFamily = () => db.family.orderBy('friendId').toArray().then(setFamily);
   const loadProfile = () => db.profile.toCollection().first().then(p => setProfile(p ?? null));
   useEffect(() => {
@@ -47,6 +54,7 @@ export default function App() {
     loadProfile();
     reload();
     reloadFamily();
+    reloadSuggestions();
     db.settings.get('lastCenter').then(r => setStart(r?.value ?? null));
   }, []);
   const saveCenter = c => db.settings.put({ key: 'lastCenter', value: c });
@@ -59,8 +67,8 @@ export default function App() {
       .map(v => ({ id: v.geonameId, name: v.name, cc: v.countryCode, admin1: v.admin1Code, lat: v.lat, lon: v.lon }));
   }, [visits]);
 
-  async function save(place, date, dateTo) {
-    const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo });
+  async function save(place, date, dateTo, source) {
+    const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo, source });
     const counted = visits.filter(v => v.exitedAirport);
     const newCountry = !counted.some(v => v.countryCode === visit.countryCode);
     const newContinent = !counted.some(v => v.continent === visit.continent);
@@ -72,6 +80,35 @@ export default function App() {
     await reload();
     navigator.vibrate?.(20);
     setUndo({ text: `Saved ${place.name}`, run: () => db.visits.delete(visit.id) });
+    return visit;
+  }
+
+  // Runs at app level so it keeps going while the person closes the inbox and uses the app.
+  async function scanPhotos(files) {
+    setScan({ running: true, done: 0, total: 0 });
+    try {
+      const result = await findPhotoTrips(places, countries, files, p => setScan({ running: true, ...p }));
+      setScan(result);
+      scheduleBackup();
+    } catch (e) {
+      setScan({ error: `Could not read photos: ${e.message}` });
+    }
+    reloadSuggestions();
+  }
+
+  async function confirmSuggestion(sg) {
+    const place = { id: sg.geonameId, name: sg.name, cc: sg.countryCode, admin1: sg.admin1Code, lat: sg.lat, lon: sg.lon };
+    await db.suggestions.update(sg.id, { status: 'confirmed' });
+    const visit = await save(place, sg.dateFrom, sg.dateTo, sg.source);
+    reloadSuggestions();
+    setUndo({ text: `Added ${sg.name}`, run: () => Promise.all([db.visits.delete(visit.id), db.suggestions.update(sg.id, { status: 'pending' })]) });
+  }
+
+  async function rejectSuggestion(sg) {
+    await db.suggestions.update(sg.id, { status: 'rejected' });
+    scheduleBackup();
+    reloadSuggestions();
+    setUndo({ text: `Skipped ${sg.name}`, run: () => db.suggestions.update(sg.id, { status: 'pending' }) });
   }
 
   async function saveEdit(changes) {
@@ -97,6 +134,7 @@ export default function App() {
     await run();
     scheduleBackup();
     reload();
+    reloadSuggestions();
   }
 
   async function saveProfile(changes) {
@@ -111,6 +149,7 @@ export default function App() {
       if (editing) setEditing(null);
       else if (country) setCountry(null);
       else if (adding) setAdding(false);
+      else if (inbox) setInbox(false);
       else if (settings) setSettings(false);
       else if (tab !== 'globe') setTab('globe');
       else return false;
@@ -139,7 +178,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <main>
         {countries && start !== undefined && <Globe geo={countries.geo} visited={s.visitedCodes} colour={profile.colour} focus={focus}
-          start={start} onLeave={saveCenter} paused={tab !== 'globe' || !!country || adding || settings} onCountry={setCountry} />}
+          start={start} onLeave={saveCenter} paused={tab !== 'globe' || !!country || adding || settings || inbox} onCountry={setCountry} />}
         <button className="avatar" style={{ background: profile.colour }} aria-label="Settings and backup" onClick={() => setSettings(true)}>
           {profile.name[0]?.toUpperCase()}
         </button>
@@ -156,6 +195,12 @@ export default function App() {
         {tab === 'family' && countries && <Family profile={profile} visits={visits} family={family} countries={countries} onChanged={reloadFamily} />}
 
         <div className="bottom">
+          {tab === 'globe' && (scan?.running || suggestions.length > 0) && (
+            <button className="inbox-pill" onClick={() => setInbox(true)}>
+              {scan?.running ? `Reading photos${scan.total ? ` · ${Math.round((scan.done / scan.total) * 100)}%` : '…'}`
+                : `${suggestions.length} ${suggestions.length === 1 ? 'place' : 'places'} from your photos to check`}
+            </button>
+          )}
           {visits.length === 0 && tab === 'globe' && <p className="empty">Tap + to add your first place</p>}
           <nav className="tabs" aria-label="Screens">
             <button className={tab === 'globe' ? 'tab on' : 'tab'} aria-current={tab === 'globe'} onClick={() => setTab('globe')}>Globe</button>
@@ -171,7 +216,10 @@ export default function App() {
           {country && <CountryView key={country} code={country} countries={countries} visits={visits} colour={profile.colour}
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
+          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos}
+            onConfirm={confirmSuggestion} onReject={rejectSuggestion} onClose={() => setInbox(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
+            onPhotos={() => { setSettings(false); setInbox(true); }}
             showFps={showFps} onShowFps={on => { setShowFps(on); try { localStorage.setItem('inkmap.fps', on ? '1' : '0'); } catch { /* private mode */ } }} />}
         </AnimatePresence>
 
@@ -180,7 +228,7 @@ export default function App() {
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
         <AnimatePresence>
           {undo && (
-            <motion.div className={adding || country || editing || settings ? 'undo low' : 'undo'} role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+            <motion.div className={adding || country || editing || settings || inbox ? 'undo low' : 'undo'} role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
               <span>{undo.text}</span>
               <button className="text-button" onClick={undoLast}>Undo</button>
             </motion.div>

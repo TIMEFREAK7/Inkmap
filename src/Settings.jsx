@@ -6,7 +6,7 @@ import { hasBackupFolder, backupNow } from './backup.js';
 import { COLOURS } from './Onboarding.jsx';
 import { loadBoundarySources } from './data.js';
 
-export default function Settings({ profile, backup, onSaveProfile, onClose, showFps, onShowFps }) {
+export default function Settings({ profile, backup, onSaveProfile, onClose, onPhotos, showFps, onShowFps }) {
   const drag = useSheetDrag(onClose);
   const [name, setName] = useState(profile.name);
   const [folder, setFolder] = useState(null);
@@ -70,6 +70,12 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, show
             <p className="hint">If this phone is lost or reset, the backup folder goes with it. Now and then, copy the file inkmap-backup.inkbackup from that folder to Google Drive or another device.</p>
           </section>
         )}
+
+        <section className="card">
+          <p className="label">Places from your photos</p>
+          <p className="hint">Find cities you've been to from where and when your photos were taken. You check each one before it's added.</p>
+          <button className="secondary" onClick={onPhotos}>Find places in my photos</button>
+        </section>
 
         <section className="card">
           <p className="label">About</p>

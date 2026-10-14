@@ -15,7 +15,7 @@ export async function loadCountries() {
   return { list, byCode, geo, admin1 };
 }
 
-// Columns: id name ascii lat lon cc admin1 pop alts (see data-pipeline/build.mjs).
+// Columns: id name ascii lat lon cc admin1 pop alts section (see data-pipeline/build.mjs).
 export function parsePlaces(text) {
   const lines = text.split('\n');
   const places = new Array(lines.length - 2);
@@ -26,7 +26,7 @@ export function parsePlaces(text) {
     const f = l.split('\t');
     places[n++] = {
       id: +f[0], name: f[1], ascii: f[2] || f[1], lat: +f[3], lon: +f[4],
-      cc: f[5], admin1: f[6], pop: +f[7], alts: f[8] ? f[8].split('|') : [],
+      cc: f[5], admin1: f[6], pop: +f[7], alts: f[8] ? f[8].split('|') : [], section: f[9] === 'x',
     };
   }
   places.length = n;
@@ -55,6 +55,8 @@ export function startPlaces() {
   return ask({ type: 'load', url: new URL(url('places.tsv'), document.baseURI).href }).then(({ count, ms }) => ({
     count, ms,
     search: query => ask({ type: 'search', query }).then(r => r.results),
+    // points: [{ lat, lon, day }] from photos -> { trips, skipped } (see backfill.js)
+    trips: points => ask({ type: 'trips', points, airportsUrl: new URL(url('airports.tsv'), document.baseURI).href }),
   }));
 }
 
@@ -70,3 +72,9 @@ export function loadRegions(code) {
 }
 
 export const loadBoundarySources = () => fetch(url('boundary-sources.json')).then(r => r.json());
+
+// Columns: iata name lat lon cc city (see data-pipeline/build.mjs).
+export const parseAirports = text => text.split('\n').slice(1).filter(Boolean).map(l => {
+  const f = l.split('\t');
+  return { iata: f[0], name: f[1], lat: +f[2], lon: +f[3], cc: f[4], city: f[5] };
+});

@@ -93,12 +93,13 @@ function buildPlaces(codes) {
     const [id, name, ascii, alts, lat, lon] = f;
     const cc = f[8], admin1 = f[10], pop = f[14];
     if (!codes.has(cc)) { dropped[cc] = (dropped[cc] || 0) + 1; continue; }
+    // 'x' marks a section of a city (PPLX, e.g. Karol Bagh in Delhi): searchable, but photos count as the city.
     lines.push([id, name, ascii === name ? '' : ascii, (+lat).toFixed(4), (+lon).toFixed(4), cc, admin1, pop,
-      trimAltNames(alts, name, ascii).join('|')].join('\t'));
+      trimAltNames(alts, name, ascii).join('|'), f[7] === 'PPLX' ? 'x' : ''].join('\t'));
   }
   if (Object.keys(dropped).length) console.warn('Places dropped (country not in list):', dropped);
   // Header line documents the column order for the app's parser.
-  fs.writeFileSync(path.join(OUT, 'places.tsv'), 'id\tname\tascii\tlat\tlon\tcc\tadmin1\tpop\talts\n' + lines.join('\n') + '\n');
+  fs.writeFileSync(path.join(OUT, 'places.tsv'), 'id\tname\tascii\tlat\tlon\tcc\tadmin1\tpop\talts\tsection\n' + lines.join('\n') + '\n');
   return lines.length;
 }
 

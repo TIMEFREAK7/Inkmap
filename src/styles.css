@@ -262,3 +262,28 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 .drop .stamp { width: 100%; background: rgba(11, 16, 38, 0.92); }
 .drop .stamp-flag { width: 96px; height: 72px; }
 .drop-caption { margin: 12px 0 0; font-size: 20px; font-weight: 700; text-shadow: 0 1px 8px var(--bg); }
+
+/* Suggestions inbox */
+.inbox-pill {
+  min-height: 48px; padding: 0 20px; border-radius: 24px; border: 1px solid var(--border); background: #1b2547;
+  font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.scan { margin-top: 12px; }
+.scan p { margin: 0 4px; }
+.scan .hint { margin: 8px 4px 0; }
+.bar { height: 8px; margin: 8px 4px 0; border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.bar div { height: 100%; background: var(--accent); transition: width 300ms; }
+.deck { position: relative; flex: 1; min-height: 280px; margin: 8px 0 16px; }
+.suggestion {
+  position: absolute; inset: 0 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 24px; border-radius: 28px; border: 1px solid var(--border); background: #1b2547; text-align: center;
+  touch-action: pan-y; cursor: grab;
+}
+.suggestion p { margin: 0; }
+.suggestion-flag { width: 72px; border-radius: 6px; margin-bottom: 12px; }
+.suggestion-name { font-size: 30px; font-weight: 700; line-height: 1.2; }
+.suggestion-date { font-size: 18px; margin-top: 8px !important; }
+.deck-buttons { display: flex; gap: 12px; }
+.deck-buttons button { flex: 1; margin: 0; }
+.inbox-empty { display: flex; flex-direction: column; flex: 1; gap: 8px; margin-top: 16px; }
+.inbox-empty p { margin: 0 4px; font-size: 18px; }
