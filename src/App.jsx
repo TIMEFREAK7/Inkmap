@@ -8,6 +8,7 @@ import Settings from './Settings.jsx';
 import Stats from './Stats.jsx';
 import CountryView from './CountryView.jsx';
 import EditVisit from './EditVisit.jsx';
+import Family from './Family.jsx';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
 import { db } from './db.js';
@@ -19,6 +20,7 @@ export default function App() {
   const [countries, setCountries] = useState(null);
   const [places, setPlaces] = useState(null);
   const [visits, setVisits] = useState([]);
+  const [family, setFamily] = useState([]);
   const [adding, setAdding] = useState(false);
   const [focus, setFocus] = useState(null);
   const [undo, setUndo] = useState(null);
@@ -33,6 +35,7 @@ export default function App() {
   const [showFps, setShowFps] = useState(() => { try { return localStorage.getItem('inkmap.fps') === '1'; } catch { return false; } });
 
   const reload = () => db.visits.orderBy('createdAt').reverse().toArray().then(setVisits);
+  const reloadFamily = () => db.family.orderBy('friendId').toArray().then(setFamily);
   const loadProfile = () => db.profile.toCollection().first().then(p => setProfile(p ?? null));
   useEffect(() => {
     loadCountries().then(setCountries, setError);
@@ -40,6 +43,7 @@ export default function App() {
     onBackupResult(setBackup);
     loadProfile();
     reload();
+    reloadFamily();
     db.settings.get('lastCenter').then(r => setStart(r?.value ?? null));
   }, []);
   const saveCenter = c => db.settings.put({ key: 'lastCenter', value: c });
@@ -119,7 +123,7 @@ export default function App() {
   if (profile === null) {
     return (
       <MotionConfig reducedMotion="user">
-        <main><Onboarding onDone={() => { loadProfile(); reload(); }} /></main>
+        <main><Onboarding onDone={() => { loadProfile(); reload(); reloadFamily(); }} /></main>
       </MotionConfig>
     );
   }
@@ -141,13 +145,15 @@ export default function App() {
         {showFps && <FpsMeter />}
         {error && <p className="error" role="alert">Something went wrong loading the map data: {String(error)}</p>}
         {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} />}
+        {tab === 'family' && countries && <Family profile={profile} visits={visits} family={family} countries={countries} onChanged={reloadFamily} />}
 
         <div className="bottom">
           {visits.length === 0 && tab === 'globe' && <p className="empty">Tap + to add your first place</p>}
           <nav className="tabs" aria-label="Screens">
             <button className={tab === 'globe' ? 'tab on' : 'tab'} aria-current={tab === 'globe'} onClick={() => setTab('globe')}>Globe</button>
-            <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
             <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
+            <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
+            <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family'} onClick={() => setTab('family')}>Family</button>
           </nav>
         </div>
 
