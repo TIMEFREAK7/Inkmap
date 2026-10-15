@@ -1,0 +1,10 @@
+<!-- B · Ink stamp: a passport stamp (double dashed border, a little tilted) with a globe printed in it. Ties the icon to the Stamps page. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g transform="rotate(-8 512 512)" fill="none" stroke="#f6ad3b" stroke-linecap="round">
+    <rect x="252" y="252" width="520" height="520" rx="96" stroke-width="30" stroke-dasharray="58 30"/>
+    <rect x="300" y="300" width="424" height="424" rx="64" stroke-width="12"/>
+    <circle cx="512" cy="512" r="150" stroke-width="26"/>
+    <ellipse cx="512" cy="512" rx="62" ry="150" stroke-width="20"/>
+    <path d="M362 512h300M380 440q132 26 264 0M380 584q132-26 264 0" stroke-width="20"/>
+  </g>
+</svg>

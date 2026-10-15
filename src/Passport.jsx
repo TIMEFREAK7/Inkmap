@@ -43,7 +43,7 @@ export default function Passport({ profile, visits, family, countries, onAdd }) 
   return (
     <div className="screen passport">
       <InkFilter />
-      <h1 className="title small">Passport</h1>
+      <h1 className="title small">Stamps</h1>
       {people.length > 1 && (
         <div className="chips" role="group" aria-label="Whose passport">
           {people.map(p => (

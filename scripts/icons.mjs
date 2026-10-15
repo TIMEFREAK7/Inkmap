@@ -4,7 +4,8 @@ import { chromium } from 'playwright';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const mark = readFileSync('resources/icon-foreground.svg', 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+// Pass another mark to try it, e.g. node scripts/icons.mjs resources/icon-options/c-ink-drop.svg
+const mark = readFileSync(process.argv[2] || 'resources/icon-foreground.svg', 'utf8').replace(/<!--[\s\S]*?-->/g, '');
 const BG = 'radial-gradient(circle at 30% 25%, #22306a, #0b1026 90%)';
 const RES = 'android/app/src/main/res';
 const DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };

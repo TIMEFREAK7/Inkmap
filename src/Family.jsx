@@ -146,7 +146,7 @@ function FamilyMap({ geo, people }) {
         version: 8,
         sources: { countries: { type: 'geojson', data: geo } },
         layers: [
-          { id: 'sea', type: 'background', paint: { 'background-color': '#0b1026' } },
+          { id: 'sea', type: 'background', paint: { 'background-color': '#161d3b' } }, // --surface-container: the map reads as a card
           { id: 'land', type: 'fill', source: 'countries', paint: { 'fill-color': '#3b4a63' } },
           ...people.map((p, i) => ({
             id: `p${i}`, type: 'fill', source: 'countries', filter: ['in', ['get', 'iso'], ['literal', p.codes]],

@@ -118,7 +118,7 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
 function Card({ s, where, behind, onConfirm, onReject }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
-  const tint = useTransform(x, [-150, 0, 150], ['#4a2236', '#1b2547', '#1d4a3c']);
+  const tint = useTransform(x, [-150, 0, 150], ['#4a2236', '#1d2547', '#1d4a3c']);
 
   async function release(_, info) {
     const dir = info.offset.x > 110 || info.velocity.x > 600 ? 1 : info.offset.x < -110 || info.velocity.x < -600 ? -1 : 0;

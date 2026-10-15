@@ -34,7 +34,7 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
         version: 8,
         sources: { country: { type: 'geojson', data: shape }, pins: { type: 'geojson', data: pins } },
         layers: [
-          { id: 'sea', type: 'background', paint: { 'background-color': '#0b1026' } },
+          { id: 'sea', type: 'background', paint: { 'background-color': '#161d3b' } }, // --surface-container: the map reads as a card
           { id: 'land', type: 'fill', source: 'country', paint: { 'fill-color': '#3b4a63' } },
           { id: 'pins', type: 'circle', source: 'pins', paint: { 'circle-radius': 4, 'circle-color': '#fff', 'circle-stroke-width': 1.5, 'circle-stroke-color': colour } },
         ],
@@ -80,7 +80,7 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
       {drag.handle}
       <div className="sheet-head">
         <h1 className="title small">{country?.name}</h1>
-        <button className="text-button" onClick={onClose}>Close</button>
+        <button className="text-button" onClick={onClose}>Done</button>
       </div>
       <p className="result-where">{country?.continent} · {cities} {cities === 1 ? 'city' : 'cities'}</p>
       <div ref={el} className="country-map" />
