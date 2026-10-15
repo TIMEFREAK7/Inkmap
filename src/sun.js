@@ -1,4 +1,4 @@
-// Where it's night right now, for the shaded half of the globe. Accurate to about a degree, plenty for a picture.
+// Where it's night right now, for the shading on the globe. Accurate to about a degree, plenty for a picture.
 const RAD = Math.PI / 180;
 
 // The point on Earth where the sun is straight overhead: { lat, lon } in degrees.
@@ -14,17 +14,33 @@ export function subsolar(date) {
   return { lat: decl, lon };
 }
 
-// The night side as one GeoJSON polygon: the day/night line from -180° to 180°, closed along the pole in darkness.
-// (Kept within ±85°, where the globe's map ends.)
-export function nightPolygon(date) {
+// The sun's height above the horizon at a place, in degrees (negative: below it).
+export function sunAltitude(sun, lat, lon) {
+  return Math.asin(Math.sin(lat * RAD) * Math.sin(sun.lat * RAD) + Math.cos(lat * RAD) * Math.cos(sun.lat * RAD) * Math.cos((lon - sun.lon) * RAD)) / RAD;
+}
+
+const TWILIGHT = 18; // astronomical twilight: fully dark when the sun is 18° below the horizon
+const STEP = 2; // degrees per cell
+const LEVELS = 12;
+
+// Night as bands of 2° cells, each with a darkness from 0 (sunset) to 1 (full night), so the line fades through
+// twilight instead of a hard edge. Neighbouring cells of the same darkness are merged: about a thousand features.
+export function nightShade(date) {
   const sun = subsolar(date);
-  const decl = Math.abs(sun.lat) < 0.01 ? 0.01 : sun.lat; // at the equinox the line runs pole to pole
-  const ring = [];
-  for (let lon = -180; lon <= 180; lon += 2) {
-    const lat = Math.atan(-Math.cos((lon - sun.lon) * RAD) / Math.tan(decl * RAD)) / RAD;
-    ring.push([lon, Math.max(-85, Math.min(85, lat))]);
+  const features = [];
+  for (let lat = -88; lat < 88; lat += STEP) {
+    let runStart = null, runLevel = 0;
+    const flush = end => {
+      if (runStart !== null && runLevel > 0) {
+        features.push({ type: 'Feature', properties: { shade: runLevel / LEVELS },
+          geometry: { type: 'Polygon', coordinates: [[[runStart, lat], [end, lat], [end, lat + STEP], [runStart, lat + STEP], [runStart, lat]]] } });
+      }
+    };
+    for (let lon = -180; lon <= 180; lon += STEP) {
+      const alt = lon < 180 ? sunAltitude(sun, lat + STEP / 2, lon + STEP / 2) : 90;
+      const level = Math.round(Math.min(1, Math.max(0, -alt / TWILIGHT + 0.08)) * LEVELS);
+      if (level !== runLevel || lon === 180) { flush(lon); runStart = lon; runLevel = level; }
+    }
   }
-  const pole = decl > 0 ? -85 : 85; // northern summer: the south pole is in darkness
-  ring.push([180, pole], [-180, pole], ring[0]);
-  return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+  return { type: 'FeatureCollection', features };
 }

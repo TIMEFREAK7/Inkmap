@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
+import { cssVar } from './theme.js';
 import { motion } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
 import { loadRegions } from './data.js';
@@ -34,8 +35,8 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
         version: 8,
         sources: { country: { type: 'geojson', data: shape }, pins: { type: 'geojson', data: pins } },
         layers: [
-          { id: 'sea', type: 'background', paint: { 'background-color': '#161d3b' } }, // --surface-container: the map reads as a card
-          { id: 'land', type: 'fill', source: 'country', paint: { 'fill-color': '#3b4a63' } },
+          { id: 'sea', type: 'background', paint: { 'background-color': cssVar('--surface-container') } }, // the map reads as a card
+          { id: 'land', type: 'fill', source: 'country', paint: { 'fill-color': cssVar('--map-land') } },
           { id: 'pins', type: 'circle', source: 'pins', paint: { 'circle-radius': 4, 'circle-color': '#fff', 'circle-stroke-width': 1.5, 'circle-stroke-color': colour } },
         ],
       },
@@ -59,12 +60,12 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
         map.addSource('seen1', { type: 'geojson', data: fc(pick(adm1)) });
         map.addSource('seen2', { type: 'geojson', data: fc(pick(adm2)) });
         // The detailed states become the land, so coasts match the shading (the country outline is globe-quality).
-        map.addLayer({ id: 'state-land', type: 'fill', source: adm1.length ? 'adm1' : 'adm2', paint: { 'fill-color': '#3b4a63' } }, 'pins');
+        map.addLayer({ id: 'state-land', type: 'fill', source: adm1.length ? 'adm1' : 'adm2', paint: { 'fill-color': cssVar('--map-land') } }, 'pins');
         map.setLayoutProperty('land', 'visibility', 'none');
         map.addLayer({ id: 'seen-states', type: 'fill', source: 'seen1', paint: { 'fill-color': colour, 'fill-opacity': 0.3 } }, 'pins');
         map.addLayer({ id: 'seen-districts', type: 'fill', source: 'seen2', paint: { 'fill-color': colour, 'fill-opacity': 0.95 } }, 'pins');
-        map.addLayer({ id: 'districts', type: 'line', source: 'adm2', paint: { 'line-color': '#0b1026', 'line-width': 0.4, 'line-opacity': 0.6 } }, 'pins');
-        map.addLayer({ id: 'states', type: 'line', source: 'adm1', paint: { 'line-color': '#0b1026', 'line-width': 1.2 } }, 'pins');
+        map.addLayer({ id: 'districts', type: 'line', source: 'adm2', paint: { 'line-color': cssVar('--map-border'), 'line-width': 0.4, 'line-opacity': 0.6 } }, 'pins');
+        map.addLayer({ id: 'states', type: 'line', source: 'adm1', paint: { 'line-color': cssVar('--map-border'), 'line-width': 1.2 } }, 'pins');
       };
       if (map.loaded()) add(); else map.once('load', add);
     });

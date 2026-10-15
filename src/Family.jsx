@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
+import { cssVar } from './theme.js';
 import { AnimatePresence, motion } from 'motion/react';
 import { Capacitor } from '@capacitor/core';
 import { db } from './db.js';
@@ -146,13 +147,13 @@ function FamilyMap({ geo, people }) {
         version: 8,
         sources: { countries: { type: 'geojson', data: geo } },
         layers: [
-          { id: 'sea', type: 'background', paint: { 'background-color': '#161d3b' } }, // --surface-container: the map reads as a card
-          { id: 'land', type: 'fill', source: 'countries', paint: { 'fill-color': '#3b4a63' } },
+          { id: 'sea', type: 'background', paint: { 'background-color': cssVar('--surface-container') } }, // the map reads as a card
+          { id: 'land', type: 'fill', source: 'countries', paint: { 'fill-color': cssVar('--map-land') } },
           ...people.map((p, i) => ({
             id: `p${i}`, type: 'fill', source: 'countries', filter: ['in', ['get', 'iso'], ['literal', p.codes]],
             paint: { 'fill-color': p.colour, 'fill-opacity': 0, 'fill-opacity-transition': { duration: 600, delay: i * 400 } },
           })),
-          { id: 'border', type: 'line', source: 'countries', paint: { 'line-color': '#0b1026', 'line-width': 0.5 } },
+          { id: 'border', type: 'line', source: 'countries', paint: { 'line-color': cssVar('--map-border'), 'line-width': 0.5 } },
         ],
       },
     });

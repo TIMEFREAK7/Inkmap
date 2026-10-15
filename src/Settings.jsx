@@ -4,10 +4,11 @@ import { useSheetDrag } from './sheet.jsx';
 import { BackupFolder } from './native.js';
 import { hasBackupFolder, backupNow, scheduleBackup } from './backup.js';
 import { COLOURS } from './Onboarding.jsx';
+import { THEMES } from './theme.js';
 import { loadBoundarySources } from './data.js';
 import { db } from './db.js';
 
-export default function Settings({ profile, backup, onSaveProfile, onClose, onPhotos, showFps, onShowFps }) {
+export default function Settings({ profile, backup, onSaveProfile, onClose, onPhotos, showFps, onShowFps, theme, onTheme }) {
   const drag = useSheetDrag(onClose);
   const [name, setName] = useState(profile.name);
   const [folder, setFolder] = useState(null);
@@ -73,6 +74,18 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
             <p className="hint">If this phone is lost or reset, the backup folder goes with it. Now and then, copy the file inkmap-backup.inkbackup from that folder to Google Drive or another device.</p>
           </section>
         )}
+
+        <section className="card">
+          <p className="label">App colour</p>
+          <div className="themes" role="radiogroup" aria-label="App colour">
+            {THEMES.map(t => (
+              <button key={t.id} role="radio" aria-checked={t.id === theme} className={t.id === theme ? 'theme picked' : 'theme'} onClick={() => onTheme(t.id)}>
+                <span className="swatch" style={{ background: t.swatch }} aria-hidden="true" />{t.name}
+              </button>
+            ))}
+          </div>
+          <p className="hint">Your colour on the map stays the same; this changes the buttons, screens and globe.</p>
+        </section>
 
         <section className="card">
           <p className="label">Find places you've been</p>

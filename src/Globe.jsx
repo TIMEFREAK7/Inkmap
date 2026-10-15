@@ -2,44 +2,71 @@ import { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { nightPolygon } from './sun.js';
+import { nightShade } from './sun.js';
+import { cssVar } from './theme.js';
 
 // MapLibre only finds its own worker over http(s); Electron loads from file://, so point it at the bundled copy.
 setWorkerUrl(workerUrl);
 
-const LAND = '#3b4a63'; // unvisited: muted slate
-
 const DEG_PER_MS = 360 / 40000; // one turn every 40 s (2 min read as sluggish on the phone)
 const RESUME_AFTER_MS = 5000;
 
-// Visited countries in the person's colour, everything else muted slate.
-const fillColour = (visited, colour) => ['case', ['in', ['get', 'iso'], ['literal', visited]], colour, LAND];
+// Visited countries in the person's colour, everything else the theme's land colour.
+const visitedFilter = visited => ['in', ['get', 'iso'], ['literal', visited]];
+const fillColour = (visited, colour) => ['case', visitedFilter(visited), colour, cssVar('--map-land')];
 
-// No tile server: the only source is the bundled country GeoJSON.
+// Faint latitude and longitude lines every 30°, so the globe reads as a sphere even over open ocean.
+const GRATICULE = {
+  type: 'FeatureCollection',
+  features: [
+    ...Array.from({ length: 12 }, (_, i) => -180 + i * 30).map(lon => ({
+      type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: Array.from({ length: 35 }, (_, j) => [lon, -85 + j * 5]) },
+    })),
+    ...[-60, -30, 0, 30, 60].map(lat => ({
+      type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: Array.from({ length: 73 }, (_, j) => [-180 + j * 5, lat]) },
+    })),
+  ],
+};
+
+// Theme colours for the globe (sky, sea, lines); re-applied when the app colour changes.
+const sky = () => ({
+  'sky-color': 'rgba(0, 0, 0, 0)', 'horizon-color': cssVar('--primary'), 'fog-color': cssVar('--map-ocean'),
+  'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85, 'atmosphere-blend': 0.85,
+});
+const themePaint = map => {
+  map.setSky(sky());
+  map.setPaintProperty('ocean', 'background-color', cssVar('--map-ocean'));
+  map.setPaintProperty('border', 'line-color', cssVar('--map-border'));
+};
+
+// No tile server: the only sources are the bundled country shapes and what's computed here.
 function style(geo, visited, colour) {
   return {
     version: 8,
     projection: { type: 'globe' },
-    sky: { 'atmosphere-blend': 0.6 },
-    sources: { countries: { type: 'geojson', data: geo }, night: { type: 'geojson', data: nightPolygon(new Date()) } },
+    sky: sky(),
+    sources: {
+      countries: { type: 'geojson', data: geo },
+      night: { type: 'geojson', data: nightShade(new Date()) },
+      graticule: { type: 'geojson', data: GRATICULE },
+    },
     layers: [
-      { id: 'space', type: 'background', paint: { 'background-color': '#0b1026' } },
-      {
-        id: 'fill', type: 'fill', source: 'countries',
-        paint: {
-          'fill-color': fillColour(visited, colour),
-          'fill-opacity': 0.9,
-        },
-      },
-      { id: 'border', type: 'line', source: 'countries', paint: { 'line-color': '#0b1026', 'line-width': 0.5 } },
-      // The night side, following the real time of day; visited colours still show through.
-      { id: 'night', type: 'fill', source: 'night', paint: { 'fill-color': '#02040f', 'fill-opacity': 0.45, 'fill-antialias': false } },
+      { id: 'ocean', type: 'background', paint: { 'background-color': cssVar('--map-ocean') } },
+      { id: 'graticule', type: 'line', source: 'graticule', paint: { 'line-color': '#ffffff', 'line-opacity': 0.07, 'line-width': 0.8 } },
+      { id: 'fill', type: 'fill', source: 'countries', paint: { 'fill-color': fillColour(visited, colour), 'fill-opacity': 0.95 } },
+      { id: 'border', type: 'line', source: 'countries', paint: { 'line-color': cssVar('--map-border'), 'line-width': 0.6 } },
+      // Night, from the real time of day: full dark where the sun is 18° below the horizon, fading through twilight.
+      { id: 'night', type: 'fill', source: 'night',
+        paint: { 'fill-color': '#000308', 'fill-opacity': ['*', ['get', 'shade'], 0.6], 'fill-antialias': false } },
+      // Above the night: visited countries glow at their edges like city lights, so they stand out on the dark side too.
+      { id: 'glow', type: 'line', source: 'countries', filter: visitedFilter(visited),
+        paint: { 'line-color': colour, 'line-width': 2.5, 'line-blur': 2.5, 'line-opacity': 0.95 } },
     ],
   };
 }
 
 // focus: { lon, lat } of a place just logged; the camera flies there and the new fill lands with it.
-export default function Globe({ geo, visited, colour, focus, paused, onCountry, start, onLeave }) {
+export default function Globe({ geo, visited, colour, focus, paused, onCountry, start, onLeave, theme }) {
   const el = useRef(null);
   const mapRef = useRef(null);
   const touchRef = useRef(null);
@@ -100,7 +127,7 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
     // Remember where the globe faced, for the next launch.
     const leave = () => { if (document.hidden) { const c = map.getCenter(); onLeaveRef.current?.([c.lng, c.lat]); } };
     document.addEventListener('visibilitychange', leave);
-    const night = setInterval(() => map.getSource('night')?.setData(nightPolygon(new Date())), 60000); // moves 0.25° a minute
+    const night = setInterval(() => map.getSource('night')?.setData(nightShade(new Date())), 60000); // moves 0.25° a minute
     return () => { clearInterval(night); document.removeEventListener('visibilitychange', leave); stopSpin(); map.remove(); };
     // The map is built once; visited/colour/focus changes are applied by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,12 +150,24 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const paint = () => map.setPaintProperty('fill', 'fill-color', fillColour(visited, colour));
+    const paint = () => {
+      map.setPaintProperty('fill', 'fill-color', fillColour(visited, colour));
+      map.setFilter('glow', visitedFilter(visited));
+      map.setPaintProperty('glow', 'line-color', colour);
+    };
     // Fill after the camera lands, so the person sees the country change colour.
     if (!map.isStyleLoaded()) map.once('load', paint);
     else if (map.isMoving()) map.once('moveend', paint);
     else paint();
   }, [visited, colour]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => { themePaint(map); map.setPaintProperty('fill', 'fill-color', fillColour(visited, colour)); };
+    if (map.isStyleLoaded()) apply(); else map.once('load', apply);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
 
   return <div ref={el} className="globe" />;
 }

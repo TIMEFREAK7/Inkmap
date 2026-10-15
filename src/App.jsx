@@ -12,6 +12,7 @@ import Family from './Family.jsx';
 import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
 import { GlobeIcon, StatsIcon, FamilyIcon, StampIcon } from './icons.jsx';
+import { applyTheme, savedTheme } from './theme.js';
 import Inbox from './Inbox.jsx';
 import BoardingScan from './BoardingScan.jsx';
 import { findPhotoTrips, importTimeline, importBoardingPass, importCalendar } from './photos.js';
@@ -40,6 +41,7 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [celebrate, setCelebrate] = useState(null); // new country / continent just logged
   const [inbox, setInbox] = useState(false);
+  const [theme, setTheme] = useState(savedTheme);
   const [boarding, setBoarding] = useState(false); // boarding pass scanner open
   const [suggestions, setSuggestions] = useState([]); // pending, newest trip first
   const [scan, setScan] = useState(null); // photo scan: { running, done, total } then { photos, videos, located, found } or { error }
@@ -238,7 +240,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <main>
         {countries && start !== undefined && <Globe geo={countries.geo} visited={s.visitedCodes} colour={profile.colour} focus={focus}
-          start={start} onLeave={saveCenter} paused={tab !== 'globe' || !!country || adding || settings || inbox} onCountry={setCountry} />}
+          start={start} onLeave={saveCenter} theme={theme} paused={tab !== 'globe' || !!country || adding || settings || inbox} onCountry={setCountry} />}
         <button className="avatar" style={{ background: profile.colour }} aria-label="Settings and backup" onClick={() => setSettings(true)}>
           {profile.name[0]?.toUpperCase()}
         </button>
@@ -282,6 +284,7 @@ export default function App() {
           {boarding && <BoardingScan onCode={boardingPassCode} onClose={() => setBoarding(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
             onPhotos={() => { setSettings(false); setInbox(true); }}
+            theme={theme} onTheme={id => { applyTheme(id); setTheme(id); }}
             showFps={showFps} onShowFps={on => { setShowFps(on); try { localStorage.setItem('inkmap.fps', on ? '1' : '0'); } catch { /* private mode */ } }} />}
         </AnimatePresence>
 

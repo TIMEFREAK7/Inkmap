@@ -3,25 +3,30 @@
    Every colour, radius and type size below comes from these tokens. */
 :root {
   color-scheme: dark;
-  /* Colour roles (dark scheme: amber primary, night-blue neutrals) */
-  --surface: #0b1026;
-  --surface-low: #111733;           /* sheets */
-  --surface-container: #161d3b;     /* cards, tiles, list groups */
-  --surface-high: #1d2547;          /* raised: dialogs, suggestion cards, undo */
-  --surface-highest: #262f55;       /* tonal buttons, fields, chips */
-  --on-surface: #e8ecf5;
-  --on-surface-variant: #a9b3cc;
-  --outline: #5d6886;
-  --outline-variant: #2b3456;
-  --primary: #f6ad3b;
-  --on-primary: #2a1800;
-  --primary-tint: rgba(246, 173, 59, 0.18);  /* amber glow on night blue (a solid tonal amber reads as brown here) */
-  --on-primary-tint: #ffd9a3;
+  /* Colour roles: "Aurora" (teal on deep night), the default theme. Others below, picked in Settings. */
+  --surface: #08121c;
+  --surface-low: #0d1823;           /* sheets */
+  --surface-container: #122030;     /* cards, tiles, list groups */
+  --surface-high: #182839;          /* raised: dialogs, suggestion cards */
+  --surface-highest: #213447;       /* tonal buttons, fields, chips, undo */
+  --on-surface: #e3eef2;
+  --on-surface-variant: #9fb4bf;
+  --outline: #587080;
+  --outline-variant: #223644;
+  --primary: #5ee0c8;
+  --on-primary: #00382f;
+  --on-primary-tint: #b8f5e8;
+  --glass: rgba(24, 40, 57, 0.6);
+  /* The globe and maps (MapLibre reads these through getComputedStyle) */
+  --map-space: #03080d;
+  --map-ocean: #0b2433;
+  --map-land: #34505e;
+  --map-border: #08121c;
+  --primary-tint: color-mix(in srgb, var(--primary) 18%, transparent); /* a glow, never a muddy solid */
   --error: #ffb4ab;
   --error-container: #8c1d18;
   --on-error-container: #ffdad6;
-  --scrim: rgba(3, 5, 15, 0.62);
-  --glass: rgba(29, 37, 71, 0.6);
+  --scrim: rgba(3, 5, 12, 0.62);
   --glass-edge: rgba(255, 255, 255, 0.14);
   /* Shape scale */
   --r-s: 12px;
@@ -47,6 +52,32 @@
   --muted: var(--on-surface-variant);
   --accent: var(--primary);
   --border: var(--outline-variant);
+}
+
+/* Other themes (Settings → App colour). Each sets the same roles, so every screen follows. */
+[data-theme="lagoon"] {
+  --surface: #0a0f1e; --surface-low: #0f1527; --surface-container: #141c32; --surface-high: #1b253f; --surface-highest: #24304f;
+  --on-surface: #e4e9f6; --on-surface-variant: #a4afc9; --outline: #5a6787; --outline-variant: #28324f;
+  --primary: #8ab4ff; --on-primary: #0a2a5c; --on-primary-tint: #d5e3ff; --glass: rgba(27, 37, 63, 0.6);
+  --map-space: #04060e; --map-ocean: #0f1f45; --map-land: #3a4a6a; --map-border: #0a0f1e;
+}
+[data-theme="violet"] {
+  --surface: #110e1b; --surface-low: #171324; --surface-container: #1e182e; --surface-high: #261f3a; --surface-highest: #302847;
+  --on-surface: #ece6f4; --on-surface-variant: #b4aac6; --outline: #6c6283; --outline-variant: #322a47;
+  --primary: #cdb5ff; --on-primary: #381e72; --on-primary-tint: #ebddff; --glass: rgba(38, 31, 58, 0.6);
+  --map-space: #07050c; --map-ocean: #1b1638; --map-land: #463e62; --map-border: #110e1b;
+}
+[data-theme="coral"] {
+  --surface: #120d14; --surface-low: #19121b; --surface-container: #211821; --surface-high: #2a1f2a; --surface-highest: #352835;
+  --on-surface: #f3e6ea; --on-surface-variant: #c4aab3; --outline: #826671; --outline-variant: #3d2c38;
+  --primary: #ff8f80; --on-primary: #5a1410; --on-primary-tint: #ffdad5; --glass: rgba(42, 31, 42, 0.6);
+  --map-space: #070408; --map-ocean: #1c1630; --map-land: #4a3a4a; --map-border: #120d14;
+}
+[data-theme="amber"] {
+  --surface: #0b1026; --surface-low: #111733; --surface-container: #161d3b; --surface-high: #1d2547; --surface-highest: #262f55;
+  --on-surface: #e8ecf5; --on-surface-variant: #a9b3cc; --outline: #5d6886; --outline-variant: #2b3456;
+  --primary: #f6ad3b; --on-primary: #2a1800; --on-primary-tint: #ffd9a3; --glass: rgba(29, 37, 71, 0.6);
+  --map-space: #05081a; --map-ocean: #0b1026; --map-land: #3b4a63; --map-border: #0b1026;
 }
 
 * { box-sizing: border-box; }
@@ -130,7 +161,7 @@ button:active:not(:disabled), .file-button:active { transform: scale(0.97); }
 .fab {
   width: 72px; height: 72px; border-radius: var(--r-l); border: none; background: var(--primary); color: var(--on-primary);
   font-size: 40px; line-height: 1; cursor: pointer;
-  box-shadow: 0 6px 24px rgba(246, 173, 59, 0.35), 0 2px 8px rgba(0, 0, 0, 0.4); /* a soft amber glow */
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--primary) 35%, transparent), 0 2px 8px rgba(0, 0, 0, 0.4); /* a soft amber glow */
 }
 .fab:disabled { opacity: 0.5; }
 .tabs .fab { flex: none; width: 64px; height: 64px; margin: -28px -4px 0; font-size: 36px; } /* overlaps its slot so the labels get the width */
@@ -198,8 +229,8 @@ button:active:not(:disabled), .file-button:active { transform: scale(0.97); }
 /* Add sheet: the way into backfill, as a tonal card */
 .find-row {
   display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-height: 64px; margin-top: 12px; padding: 14px 18px;
-  border: 1px solid rgba(246, 173, 59, 0.3); border-radius: var(--r-l); text-align: left; cursor: pointer;
-  background: linear-gradient(135deg, rgba(246, 173, 59, 0.22), rgba(246, 173, 59, 0.06));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent); border-radius: var(--r-l); text-align: left; cursor: pointer;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, transparent), color-mix(in srgb, var(--primary) 6%, transparent));
 }
 .find-row .result-name { color: var(--primary); }
 .find-row .result-where { color: var(--on-primary-tint); opacity: 0.85; }
@@ -222,7 +253,7 @@ button:active:not(:disabled), .file-button:active { transform: scale(0.97); }
 
 /* ---------- Onboarding ---------- */
 .onboarding { position: absolute; inset: 0; padding: calc(var(--top) + 24px) 20px calc(var(--bottom) + 20px); display: flex; flex-direction: column; gap: 8px; overflow-y: auto; background: var(--surface); }
-.logo { width: 96px; height: 96px; border-radius: var(--r-l); margin-top: 24px; box-shadow: 0 8px 28px rgba(246, 173, 59, 0.18); }
+.logo { width: 96px; height: 96px; border-radius: var(--r-l); margin-top: 24px; box-shadow: 0 8px 28px color-mix(in srgb, var(--primary) 18%, transparent); }
 
 /* ---------- Settings ---------- */
 .me { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
@@ -234,7 +265,7 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 /* ---------- Stats ---------- */
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
 .tile { display: flex; flex-direction: column; padding: 16px; }
-.tile.big { grid-column: 1 / -1; background: linear-gradient(135deg, rgba(246, 173, 59, 0.2), var(--surface-container) 70%); }
+.tile.big { grid-column: 1 / -1; background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 20%, transparent), var(--surface-container) 70%); }
 .tile.big .tile-value { color: var(--primary); }
 .tile-value { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tile.big .tile-value { font-size: var(--t-display); line-height: 1.1; }
@@ -363,3 +394,20 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 /* Keyboard focus (Windows, web): visible on everything that can be tabbed to; touch taps don't trigger it. */
 :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 .search:focus-visible, .field input:focus-visible { outline: none; }
+
+/* Settings: app colour picker */
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.theme { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border-radius: var(--r-m);
+  border: 2px solid transparent; background: var(--surface-highest); font-size: var(--t-label-s); font-weight: 600; cursor: pointer; }
+.theme .swatch { width: 36px; height: 36px; border: none; cursor: inherit; }
+.theme.picked { border-color: var(--primary); }
+
+/* Stars behind the globe (the map's own sky is see-through, so they show around the planet). */
+.globe { background:
+  radial-gradient(1px 1px at 12% 18%, #fff8, transparent), radial-gradient(1px 1px at 78% 12%, #fff6, transparent),
+  radial-gradient(1.5px 1.5px at 30% 82%, #fff7, transparent), radial-gradient(1px 1px at 88% 64%, #fff5, transparent),
+  radial-gradient(1px 1px at 55% 6%, #fff6, transparent), radial-gradient(1.5px 1.5px at 6% 52%, #fff6, transparent),
+  radial-gradient(1px 1px at 66% 90%, #fff5, transparent), radial-gradient(1px 1px at 92% 30%, #fff7, transparent),
+  radial-gradient(1px 1px at 22% 40%, #fff4, transparent), radial-gradient(1px 1px at 46% 70%, #fff4, transparent),
+  radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 60%),
+  var(--map-space); }

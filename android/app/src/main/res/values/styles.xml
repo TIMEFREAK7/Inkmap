@@ -19,7 +19,7 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
         <!-- Android 12+: the icon on night blue, the same colour the app opens to. -->
-        <item name="windowSplashScreenBackground">#0B1026</item>
+        <item name="windowSplashScreenBackground">#08121C</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
     </style>
 </resources>

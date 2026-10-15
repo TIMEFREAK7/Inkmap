@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       injectRegister: false, // registered in main.jsx, web only
-      manifest: { name: 'Inkmap', short_name: 'Inkmap', background_color: '#0b1026', theme_color: '#0b1026', display: 'standalone',
+      manifest: { name: 'Inkmap', short_name: 'Inkmap', background_color: '#08121c', theme_color: '#08121c', display: 'standalone',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
