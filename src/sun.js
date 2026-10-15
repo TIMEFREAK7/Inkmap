@@ -38,3 +38,16 @@ export function nightAlpha(date, w = 256, h = 256, max = 0.62) {
   }
   return alpha;
 }
+
+// MapLibre light position ([radius, azimuth°, polar°], anchor 'map') that lights the globe's atmosphere from the
+// real sun: the bright rim then sits on the day side and the night side's edge stays dark.
+// MapLibre turns the light into a direction with x east, y north, z out of the globe at 0°N 0°E and points it
+// the opposite way; so the light sits at minus the direction to the subsolar point.
+export function sunLight(date) {
+  const s = subsolar(date);
+  const [la, lo] = [s.lat * RAD, s.lon * RAD];
+  const v = [Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)]; // toward the sun
+  const polar = Math.acos(-v[2]) / RAD;
+  const azimuth = Math.atan2(-v[1], -v[0]) / RAD - 90;
+  return [1.5, azimuth, polar];
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { nightAlpha, subsolar, MERCATOR_LAT } from './sun.js';
+import { nightAlpha, subsolar, sunLight, MERCATOR_LAT } from './sun.js';
 import { cssVar } from './theme.js';
 
 // MapLibre only finds its own worker over http(s); Electron loads from file://, so point it at the bundled copy.
@@ -42,8 +42,8 @@ const sunPoint = date => { const s = subsolar(date); return { type: 'Point', coo
 
 // Theme colours for the globe (sky, sea, lines); re-applied when the app colour changes.
 const sky = () => ({
-  'sky-color': 'rgba(0, 0, 0, 0)', 'horizon-color': cssVar('--primary'), 'fog-color': cssVar('--map-ocean'),
-  'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85, 'atmosphere-blend': 0.85,
+  'sky-color': 'rgba(0, 0, 0, 0)', 'horizon-color': 'rgba(0, 0, 0, 0)', 'fog-color': cssVar('--map-ocean'),
+  'sky-horizon-blend': 0, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85, 'atmosphere-blend': 0.4,
 });
 const themePaint = map => {
   map.setSky(sky());
@@ -57,6 +57,8 @@ function style(geo, visited, colour) {
     version: 8,
     projection: { type: 'globe' },
     sky: sky(),
+    // The atmosphere's glow is lit by this light: aimed at the real sun, the bright rim marks the day side.
+    light: { anchor: 'map', position: sunLight(new Date()) },
     sources: {
       countries: { type: 'geojson', data: geo },
       night: { type: 'image', url: nightImage(new Date()), coordinates: NIGHT_CORNERS },
@@ -146,6 +148,7 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
       const now = new Date();
       map.getSource('night')?.updateImage({ url: nightImage(now), coordinates: NIGHT_CORNERS });
       map.getSource('sun')?.setData(sunPoint(now));
+      map.setLight({ anchor: 'map', position: sunLight(now) });
     }, 60000);
     return () => { clearInterval(night); document.removeEventListener('visibilitychange', leave); stopSpin(); map.remove(); };
     // The map is built once; visited/colour/focus changes are applied by the effects below.
