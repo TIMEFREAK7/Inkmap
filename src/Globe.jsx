@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { nightShade } from './sun.js';
+import { nightAlpha, subsolar, MERCATOR_LAT } from './sun.js';
 import { cssVar } from './theme.js';
 
 // MapLibre only finds its own worker over http(s); Electron loads from file://, so point it at the bundled copy.
@@ -28,6 +28,18 @@ const GRATICULE = {
   ],
 };
 
+// Night as one picture over the whole world (see sun.js): drawn on a small canvas, handed to the map as an image.
+const NIGHT_CORNERS = [[-180, MERCATOR_LAT], [180, MERCATOR_LAT], [180, -MERCATOR_LAT], [-180, -MERCATOR_LAT]];
+function nightImage(date) {
+  const n = 256, canvas = Object.assign(document.createElement('canvas'), { width: n, height: n });
+  const ctx = canvas.getContext('2d'), img = ctx.createImageData(n, n), alpha = nightAlpha(date, n, n);
+  for (let i = 0; i < alpha.length; i++) { img.data[i * 4 + 2] = 10; img.data[i * 4 + 3] = alpha[i]; } // near-black, a hint of blue
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL();
+}
+// Where the sun is overhead: a glowing dot, so the lit side reads as day at a glance.
+const sunPoint = date => { const s = subsolar(date); return { type: 'Point', coordinates: [s.lon, s.lat] }; };
+
 // Theme colours for the globe (sky, sea, lines); re-applied when the app colour changes.
 const sky = () => ({
   'sky-color': 'rgba(0, 0, 0, 0)', 'horizon-color': cssVar('--primary'), 'fog-color': cssVar('--map-ocean'),
@@ -47,7 +59,8 @@ function style(geo, visited, colour) {
     sky: sky(),
     sources: {
       countries: { type: 'geojson', data: geo },
-      night: { type: 'geojson', data: nightShade(new Date()) },
+      night: { type: 'image', url: nightImage(new Date()), coordinates: NIGHT_CORNERS },
+      sun: { type: 'geojson', data: sunPoint(new Date()) },
       graticule: { type: 'geojson', data: GRATICULE },
     },
     layers: [
@@ -55,9 +68,11 @@ function style(geo, visited, colour) {
       { id: 'graticule', type: 'line', source: 'graticule', paint: { 'line-color': '#ffffff', 'line-opacity': 0.07, 'line-width': 0.8 } },
       { id: 'fill', type: 'fill', source: 'countries', paint: { 'fill-color': fillColour(visited, colour), 'fill-opacity': 0.95 } },
       { id: 'border', type: 'line', source: 'countries', paint: { 'line-color': cssVar('--map-border'), 'line-width': 0.6 } },
-      // Night, from the real time of day: full dark where the sun is 18° below the horizon, fading through twilight.
-      { id: 'night', type: 'fill', source: 'night',
-        paint: { 'fill-color': '#000308', 'fill-opacity': ['*', ['get', 'shade'], 0.6], 'fill-antialias': false } },
+      // Night, from the real time of day: dark where the sun is 18° below the horizon, fading softly through twilight.
+      { id: 'night', type: 'raster', source: 'night', paint: { 'raster-resampling': 'linear', 'raster-fade-duration': 0 } },
+      { id: 'sun-halo', type: 'circle', source: 'sun', paint: { 'circle-radius': 22, 'circle-color': '#ffd66b', 'circle-opacity': 0.25, 'circle-blur': 1 } },
+      { id: 'sun', type: 'circle', source: 'sun',
+        paint: { 'circle-radius': 7, 'circle-color': '#ffe9a8', 'circle-stroke-color': '#ffd66b', 'circle-stroke-width': 2, 'circle-blur': 0.15 } },
       // Above the night: visited countries glow at their edges like city lights, so they stand out on the dark side too.
       { id: 'glow', type: 'line', source: 'countries', filter: visitedFilter(visited),
         paint: { 'line-color': colour, 'line-width': 2.5, 'line-blur': 2.5, 'line-opacity': 0.95 } },
@@ -127,7 +142,11 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
     // Remember where the globe faced, for the next launch.
     const leave = () => { if (document.hidden) { const c = map.getCenter(); onLeaveRef.current?.([c.lng, c.lat]); } };
     document.addEventListener('visibilitychange', leave);
-    const night = setInterval(() => map.getSource('night')?.setData(nightShade(new Date())), 60000); // moves 0.25° a minute
+    const night = setInterval(() => { // moves 0.25° a minute
+      const now = new Date();
+      map.getSource('night')?.updateImage({ url: nightImage(now), coordinates: NIGHT_CORNERS });
+      map.getSource('sun')?.setData(sunPoint(now));
+    }, 60000);
     return () => { clearInterval(night); document.removeEventListener('visibilitychange', leave); stopSpin(); map.remove(); };
     // The map is built once; visited/colour/focus changes are applied by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps

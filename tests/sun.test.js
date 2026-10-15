@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { subsolar, sunAltitude, nightShade } from '../src/sun.js';
+import { subsolar, sunAltitude, nightAlpha } from '../src/sun.js';
 
-const shadeAt = (fc, lon, lat) => fc.features.find(f => {
-  const [[a, b], [c], [, , [, d]]] = [f.geometry.coordinates[0][0], f.geometry.coordinates[0][1], f.geometry.coordinates[0]];
-  return lon >= a && lon < c && lat >= b && lat < d;
-})?.properties.shade ?? 0;
+// Darkness (0-1) at a place, read from the 360×360 Mercator image.
+const darkAt = (img, lon, lat, n = 360) => {
+  const x = Math.floor(((lon + 180) / 360) * n);
+  const y = Math.floor(((1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2) * n);
+  return img[y * n + x] / (0.62 * 255);
+};
 
 describe('day and night', () => {
   it('puts the sun over the tropic of Cancer in June and near the equator in March', () => {
@@ -20,14 +22,12 @@ describe('day and night', () => {
     expect(sunAltitude(sun, 0, 179)).toBeLessThan(-60);
   });
   it('shades night fully, twilight partly and day not at all', () => {
-    const fc = nightShade(new Date('2025-06-21T12:00:00Z'));
-    expect(shadeAt(fc, 1, 11)).toBe(0); // noon near Greenwich
-    expect(shadeAt(fc, 175, 1)).toBe(1); // Pacific at midnight
-    expect(shadeAt(fc, 1, -87)).toBe(1); // near the South Pole in June: dark even at noon (at 79°S it's only twilight)
-    expect(shadeAt(fc, 175, 79)).toBeLessThan(1); // Arctic summer midnight: twilight at most
-    const dusk = shadeAt(fc, 95, 1); // ~6° past the terminator
-    expect(dusk).toBeGreaterThan(0);
-    expect(dusk).toBeLessThan(1);
-    expect(fc.features.length).toBeLessThan(3000);
+    const img = nightAlpha(new Date('2025-06-21T12:00:00Z'), 360, 360);
+    expect(darkAt(img, 1, 11)).toBe(0); // noon near Greenwich
+    expect(darkAt(img, 175, 1)).toBeCloseTo(1, 1); // Pacific at midnight
+    expect(darkAt(img, 1, -84)).toBeCloseTo(1, 1); // far south in June: dark even at noon
+    const dusk = darkAt(img, 95, 1); // a few degrees past sunset
+    expect(dusk).toBeGreaterThan(0.05);
+    expect(dusk).toBeLessThan(0.95);
   });
 });

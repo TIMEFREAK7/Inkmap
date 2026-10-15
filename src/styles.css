@@ -22,6 +22,7 @@
   --map-ocean: #0b2433;
   --map-land: #34505e;
   --map-border: #08121c;
+  --glow-2: #3a6fd8;                /* second ambient glow behind screens (blue with teal) */
   --primary-tint: color-mix(in srgb, var(--primary) 18%, transparent); /* a glow, never a muddy solid */
   --error: #ffb4ab;
   --error-container: #8c1d18;
@@ -56,24 +57,28 @@
 
 /* Other themes (Settings → App colour). Each sets the same roles, so every screen follows. */
 [data-theme="lagoon"] {
+  --glow-2: #8a6cf0;
   --surface: #0a0f1e; --surface-low: #0f1527; --surface-container: #141c32; --surface-high: #1b253f; --surface-highest: #24304f;
   --on-surface: #e4e9f6; --on-surface-variant: #a4afc9; --outline: #5a6787; --outline-variant: #28324f;
   --primary: #8ab4ff; --on-primary: #0a2a5c; --on-primary-tint: #d5e3ff; --glass: rgba(27, 37, 63, 0.6);
   --map-space: #04060e; --map-ocean: #0f1f45; --map-land: #3a4a6a; --map-border: #0a0f1e;
 }
 [data-theme="violet"] {
+  --glow-2: #e06ab4;
   --surface: #110e1b; --surface-low: #171324; --surface-container: #1e182e; --surface-high: #261f3a; --surface-highest: #302847;
   --on-surface: #ece6f4; --on-surface-variant: #b4aac6; --outline: #6c6283; --outline-variant: #322a47;
   --primary: #cdb5ff; --on-primary: #381e72; --on-primary-tint: #ebddff; --glass: rgba(38, 31, 58, 0.6);
   --map-space: #07050c; --map-ocean: #1b1638; --map-land: #463e62; --map-border: #110e1b;
 }
 [data-theme="coral"] {
+  --glow-2: #8a5cf0;
   --surface: #120d14; --surface-low: #19121b; --surface-container: #211821; --surface-high: #2a1f2a; --surface-highest: #352835;
   --on-surface: #f3e6ea; --on-surface-variant: #c4aab3; --outline: #826671; --outline-variant: #3d2c38;
   --primary: #ff8f80; --on-primary: #5a1410; --on-primary-tint: #ffdad5; --glass: rgba(42, 31, 42, 0.6);
   --map-space: #070408; --map-ocean: #1c1630; --map-land: #4a3a4a; --map-border: #120d14;
 }
 [data-theme="amber"] {
+  --glow-2: #3a6fd8;
   --surface: #0b1026; --surface-low: #111733; --surface-container: #161d3b; --surface-high: #1d2547; --surface-highest: #262f55;
   --on-surface: #e8ecf5; --on-surface-variant: #a9b3cc; --outline: #5d6886; --outline-variant: #2b3456;
   --primary: #f6ad3b; --on-primary: #2a1800; --on-primary-tint: #ffd9a3; --glass: rgba(29, 37, 71, 0.6);
@@ -411,3 +416,40 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
   radial-gradient(1px 1px at 22% 40%, #fff4, transparent), radial-gradient(1px 1px at 46% 70%, #fff4, transparent),
   radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 60%),
   var(--map-space); }
+
+/* ---------- Fluid glass (ColorOS 17) across the app ----------
+   Every screen and sheet gets a soft two-colour glow behind it; cards, dialogs, fields and secondary buttons are
+   frosted glass over that glow, with a light top edge. The main button glows. Text sits on at least 70% opacity
+   glass where it overlaps moving or busy content (undo, suggestion cards), so it stays readable. */
+.screen, .sheet, .onboarding { isolation: isolate; }
+.screen::before, .sheet::before, .onboarding::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 0% 0%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+    radial-gradient(55% 40% at 100% 35%, color-mix(in srgb, var(--glow-2) 20%, transparent), transparent 70%),
+    radial-gradient(70% 45% at 30% 100%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 70%);
+}
+.card, .tile, .group, .person, .empty-state, .notice, .theme, .dialog, .suggestion, .undo,
+.secondary, .chip, .search, .field input, .field textarea, .group-count, .find-row {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 6px 22px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5);
+}
+.secondary, .chip, .theme { background-color: rgba(255, 255, 255, 0.09); }
+/* Readability where glass sits over moving or busy content */
+.dialog { background-color: color-mix(in srgb, var(--surface-high) 82%, transparent); }
+.undo { background-color: color-mix(in srgb, var(--surface-highest) 88%, transparent); }
+.suggestion { background-color: color-mix(in srgb, var(--surface-high) 75%, transparent); }
+.theme.picked { border-color: var(--primary); }
+.search:focus, .field input:focus, .field textarea:focus { border-color: var(--primary); }
+/* Luminous primary: a gradient of the theme colour with a soft glow */
+.primary:not(:disabled), .fab {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 82%, white), var(--primary) 55%, color-mix(in srgb, var(--primary) 80%, var(--glow-2)));
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--primary) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.tile.big { background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 24%, transparent), color-mix(in srgb, var(--glow-2) 10%, transparent) 70%), rgba(255, 255, 255, 0.04); }
+/* Maps keep a solid card colour behind them (they're drawn by the map, not the page) */
+.country-map, .family-map { border: 1px solid rgba(255, 255, 255, 0.1); }
+/* The avatar and counters on the globe get the same glass treatment as the tab bar */
+.avatar:not(.big):not(.small) { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.4); }

@@ -20,27 +20,21 @@ export function sunAltitude(sun, lat, lon) {
 }
 
 const TWILIGHT = 18; // astronomical twilight: fully dark when the sun is 18° below the horizon
-const STEP = 2; // degrees per cell
-const LEVELS = 12;
+export const MERCATOR_LAT = 85.0511; // the square world image covers Web Mercator's full latitude range
 
-// Night as bands of 2° cells, each with a darkness from 0 (sunset) to 1 (full night), so the line fades through
-// twilight instead of a hard edge. Neighbouring cells of the same darkness are merged: about a thousand features.
-export function nightShade(date) {
+// Night as an image: per pixel, how dark (0-255), for a w×h Web Mercator picture of the whole world.
+// The globe stretches it over the planet with smooth filtering, so the line fades softly through twilight,
+// and redrawing it once a minute costs one texture upload instead of re-tiling thousands of shapes.
+export function nightAlpha(date, w = 256, h = 256, max = 0.62) {
   const sun = subsolar(date);
-  const features = [];
-  for (let lat = -88; lat < 88; lat += STEP) {
-    let runStart = null, runLevel = 0;
-    const flush = end => {
-      if (runStart !== null && runLevel > 0) {
-        features.push({ type: 'Feature', properties: { shade: runLevel / LEVELS },
-          geometry: { type: 'Polygon', coordinates: [[[runStart, lat], [end, lat], [end, lat + STEP], [runStart, lat + STEP], [runStart, lat]]] } });
-      }
-    };
-    for (let lon = -180; lon <= 180; lon += STEP) {
-      const alt = lon < 180 ? sunAltitude(sun, lat + STEP / 2, lon + STEP / 2) : 90;
-      const level = Math.round(Math.min(1, Math.max(0, -alt / TWILIGHT + 0.08)) * LEVELS);
-      if (level !== runLevel || lon === 180) { flush(lon); runStart = lon; runLevel = level; }
+  const alpha = new Uint8ClampedArray(w * h);
+  for (let y = 0; y < h; y++) {
+    const lat = Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + 0.5)) / h))) / RAD;
+    for (let x = 0; x < w; x++) {
+      const lon = -180 + (360 * (x + 0.5)) / w;
+      const dark = Math.min(1, Math.max(0, (2 - sunAltitude(sun, lat, lon)) / (TWILIGHT + 2))); // starts just before sunset
+      alpha[y * w + x] = Math.round(dark * dark * (3 - 2 * dark) * max * 255); // smoothstep: no visible band edges
     }
   }
-  return { type: 'FeatureCollection', features };
+  return alpha;
 }
