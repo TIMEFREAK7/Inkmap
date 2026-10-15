@@ -13,7 +13,7 @@ import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
 import Inbox from './Inbox.jsx';
 import BoardingScan from './BoardingScan.jsx';
-import { findPhotoTrips, importTimeline, importBoardingPass } from './photos.js';
+import { findPhotoTrips, importTimeline, importBoardingPass, importCalendar } from './photos.js';
 import { km, HOME_KM } from './backfill.js';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
@@ -95,6 +95,17 @@ export default function App() {
       scheduleBackup();
     } catch (e) {
       setScan(e.message === 'No folder chosen' ? null : { error: `Could not read photos: ${e.message}` });
+    }
+    reloadSuggestions();
+  }
+
+  async function calendarImport() {
+    setScan({ running: true, label: 'Reading your calendar', done: 0, total: 0 });
+    try {
+      setScan(await importCalendar(places, countries));
+      scheduleBackup();
+    } catch (e) {
+      setScan({ error: e.message });
     }
     reloadSuggestions();
   }
@@ -264,7 +275,7 @@ export default function App() {
           {country && <CountryView key={country} code={country} countries={countries} visits={visits} colour={profile.colour}
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
-          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport}
+          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport} onCalendar={calendarImport}
             onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onBoarding={() => setBoarding(true)} onClose={() => setInbox(false)} />}
           {boarding && <BoardingScan onCode={boardingPassCode} onClose={() => setBoarding(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}

@@ -24,8 +24,9 @@ export default function Stats({ s, countries, visits, onCountry }) {
       <h2 className="list-title">Countries</h2>
       {s.countries === 0 && <p className="hint">Countries you visit will be listed here.</p>}
       {progress.filter(p => p.visited).map(p => (
-        <section key={p.continent}>
-          <h3 className="group-title">{p.continent}</h3>
+        // Collapsed by default so a long list never pushes the next continent far down; tap to open.
+        <details key={p.continent} className="group">
+          <summary className="group-title">{p.continent} <span className="group-count">{p.visited}</span></summary>
           <ul className="results">
             {s.visitedCodes.filter(c => countries.byCode[c].continent === p.continent)
               .sort((a, b) => latest[b].localeCompare(latest[a]))
@@ -38,7 +39,7 @@ export default function Stats({ s, countries, visits, onCountry }) {
                 </li>
               ))}
           </ul>
-        </section>
+        </details>
       ))}
     </div>
   );

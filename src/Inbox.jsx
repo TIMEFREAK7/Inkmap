@@ -8,7 +8,7 @@ import { scansLibrary } from './photos.js';
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // Suggestions inbox: one card at a time. Swipe right (or tap Yes) to add it as a visit, left (or Not me) to drop it.
-export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onBoarding, onConfirm: confirm, onReject, onHome, onClose }) {
+export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onCalendar, onBoarding, onConfirm: confirm, onReject, onHome, onClose }) {
   const [asking, setAsking] = useState(null); // boarding pass suggestion waiting for "Did you leave the airport?"
   // A boarding pass alone doesn't show the person left the airport, so confirming asks.
   const onConfirm = s => (s.source === 'boardingPass' ? setAsking(s) : confirm(s));
@@ -39,6 +39,9 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
         </div>
       )}
       {scan?.error && <p className="warn" role="alert">{scan.error}</p>}
+      {scan?.calendarEvents != null && (
+        <p className="hint scan-summary">Read {plural(scan.calendarEvents, 'calendar event', 'calendar events')} with a place{' · '}{plural(scan.found, 'new place', 'new places')}</p>
+      )}
       {scan?.timelineVisits != null && (
         <p className="hint scan-summary">Read {plural(scan.timelineVisits, 'Timeline visit', 'Timeline visits')}{' · '}{plural(scan.found, 'new place', 'new places')}</p>
       )}
@@ -79,7 +82,13 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
                 <button className="secondary" onClick={() => onScan('folder')}>Choose a folder</button>
               </>
             )}
-            <p className="hint">A paper boarding pass, or a screenshot of one from an airline app.</p>
+            {scansLibrary && (
+              <>
+                <p className="hint">Trips, hotel stays and flights in your phone's calendar (Gmail adds flights and hotels there).</p>
+                <button className="secondary" onClick={onCalendar}>Look through my calendar</button>
+              </>
+            )}
+            <p className="hint">A paper boarding pass, a PDF e-ticket, or a screenshot from an airline app.</p>
             <button className="secondary" onClick={onBoarding}>Scan a boarding pass</button>
             <p className="hint">Export it from phone Settings → Location → Location services → Timeline, then pick Timeline.json.</p>
             <button className="secondary" onClick={() => timelineRef.current.click()}>Import Google Maps Timeline</button>
@@ -127,7 +136,7 @@ function Card({ s, where, behind, onConfirm, onReject }) {
       <p className="suggestion-name">{s.name}</p>
       <p className="result-where">{where}</p>
       <p className="suggestion-date">{describeDates(s)}</p>
-      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline'
+      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline' : s.source === 'calendar' ? 'From your calendar'
         : s.flight ? `Flight ${s.flight.carrier} ${s.flight.number} · ${s.flight.from} → ${s.flight.to}` : plural(s.photos, 'photo', 'photos')}</p>
     </motion.div>
   );

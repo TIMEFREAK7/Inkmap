@@ -3,12 +3,14 @@
 import { Capacitor } from '@capacitor/core';
 import exifr from 'exifr';
 import { db } from './db.js';
-import { PhotoScan } from './native.js';
+import { PhotoScan, Calendar } from './native.js';
 import { makeVisit } from './visits.js';
 import { unseenTrips, km, HOME_KM } from './backfill.js';
 import { parseBoardingPass } from './boardingPass.js';
 import { today } from './dates.js';
 import { parseTimeline } from './timeline.js';
+import { eventQuery, eventDays, placeFromText } from './calendar.js';
+import { norm } from './search.js';
 
 // Android scans the whole library (the photo picker strips location); elsewhere the person picks files.
 export const scansLibrary = Capacitor.isNativePlatform();
@@ -58,6 +60,25 @@ export async function importTimeline(places, countries, files) {
     visits += r.visits;
   }
   return { timelineVisits: visits, found: await addSuggestions(places, countries, points, 'timeline') };
+}
+
+// Android: events in the phone's calendar with a place, and flights. Same trip rules as photos.
+export async function importCalendar(places, countries) {
+  const { events } = await Calendar.events();
+  const countryCodes = Object.fromEntries(countries.list.map(c => [norm(c.name), c.code]));
+  const found = new Map(); // lookups repeat a lot (the same office, the same hotel): each text is resolved once
+  const points = [];
+  for (const e of events) {
+    const q = eventQuery(e);
+    if (!q) continue;
+    const key = q.iata ? `iata:${q.iata}` : norm(q.text);
+    if (!found.has(key)) {
+      found.set(key, q.iata ? (await places.airportCities([q.iata]))[q.iata] ?? null : await placeFromText(q.text, places.search, countryCodes));
+    }
+    const p = found.get(key);
+    if (p) for (const day of eventDays(e)) points.push({ lat: p.lat, lon: p.lon, day });
+  }
+  return { calendarEvents: events.length, found: await addSuggestions(places, countries, points, 'calendar') };
 }
 
 // A scanned boarding pass: one suggestion per flight, at the city its destination airport serves (not home).

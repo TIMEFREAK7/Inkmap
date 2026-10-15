@@ -4,3 +4,4 @@ import { registerPlugin } from '@capacitor/core';
 export const PhotoScan = registerPlugin('PhotoScan');
 export const BackupFolder = registerPlugin('BackupFolder');
 export const FileShare = registerPlugin('FileShare');
+export const Calendar = registerPlugin('Calendar');

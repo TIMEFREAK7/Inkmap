@@ -50,5 +50,6 @@
     <!-- Haptic tap when a visit saves. -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>
