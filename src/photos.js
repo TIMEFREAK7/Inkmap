@@ -6,6 +6,7 @@ import { db } from './db.js';
 import { PhotoScan } from './native.js';
 import { makeVisit } from './visits.js';
 import { unseenTrips } from './backfill.js';
+import { parseTimeline } from './timeline.js';
 
 // Android scans the whole library (the photo picker strips location); elsewhere the person picks files.
 export const scansLibrary = Capacitor.isNativePlatform();
@@ -39,15 +40,33 @@ export async function findPhotoTrips(places, countries, source, onProgress) {
   const files = Array.isArray(source) ? source : null;
   // v2: videos and SD cards were added, so the first scan with them reads everything again (duplicates are dropped).
   const last = (await db.settings.get('photoScan.v2'))?.value;
-  const home = (await db.settings.get('home'))?.value;
   const read = files ? await readFiles(files, onProgress) : await readLibrary(last?.lastAdded ?? 0, source === 'folder', onProgress);
-  const { trips } = await places.trips(read.points, home);
+  const found = await addSuggestions(places, countries, read.points, 'photo');
+  if (!source) await db.settings.put({ key: 'photoScan.v2', value: { lastAdded: read.lastAdded, at: new Date().toISOString() } });
+  return { photos: read.photos, videos: read.videos, located: read.located, found };
+}
+
+// Google Maps Timeline export(s): the places the person stayed, through the same trip rules as photos.
+export async function importTimeline(places, countries, files) {
+  const points = [];
+  let visits = 0;
+  for (const f of files) {
+    const r = parseTimeline(await f.text());
+    points.push(...r.points);
+    visits += r.visits;
+  }
+  return { timelineVisits: visits, found: await addSuggestions(places, countries, points, 'timeline') };
+}
+
+// Points -> trips (home and airports skipped, consecutive days joined) -> new inbox suggestions. Returns how many.
+async function addSuggestions(places, countries, points, source) {
+  const home = (await db.settings.get('home'))?.value;
+  const { trips } = await places.trips(points, home);
   const fresh = unseenTrips(trips, await db.visits.toArray(), await db.suggestions.toArray());
   await db.suggestions.bulkAdd(fresh.map(t => ({
-    ...makeVisit(t.place, countries.byCode[t.place.cc], { date: t.dateFrom, dateTo: t.dateTo === t.dateFrom ? undefined : t.dateTo, source: 'photo' }),
+    ...makeVisit(t.place, countries.byCode[t.place.cc], { date: t.dateFrom, dateTo: t.dateTo === t.dateFrom ? undefined : t.dateTo, source }),
     status: 'pending',
-    photos: t.photos,
+    photos: t.photos, // points behind the trip: photos, or days of Timeline stays
   })));
-  if (!source) await db.settings.put({ key: 'photoScan.v2', value: { lastAdded: read.lastAdded, at: new Date().toISOString() } });
-  return { photos: read.photos, videos: read.videos, located: read.located, found: fresh.length };
+  return fresh.length;
 }

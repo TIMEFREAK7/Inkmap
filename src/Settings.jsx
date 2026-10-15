@@ -75,14 +75,14 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
         )}
 
         <section className="card">
-          <p className="label">Places from your photos</p>
-          <p className="hint">Find cities you've been to from where and when your photos were taken. You check each one before it's added.</p>
+          <p className="label">Find places you've been</p>
+          <p className="hint">From where and when your photos were taken, or from your Google Maps Timeline. You check each one before it's added.</p>
           {home && (
             <p>Home town: <b>{home.name}</b>. Photos taken around it are skipped.{' '}
               <button className="text-button" onClick={async () => { await db.settings.delete('home'); scheduleBackup(); setHome(null); }}>Clear</button>
             </p>
           )}
-          <button className="secondary" onClick={onPhotos}>Find places in my photos</button>
+          <button className="secondary" onClick={onPhotos}>Find places I've been</button>
         </section>
 
         <section className="card">

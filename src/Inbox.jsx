@@ -8,9 +8,10 @@ import { scansLibrary } from './photos.js';
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // Suggestions inbox: one card at a time. Swipe right (or tap Yes) to add it as a visit, left (or Not me) to drop it.
-export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onReject, onHome, onClose }) {
+export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onConfirm, onReject, onHome, onClose }) {
   const drag = useSheetDrag(onClose);
   const fileRef = useRef(null);
+  const timelineRef = useRef(null);
   const [top, next] = suggestions;
 
   function start() {
@@ -19,23 +20,26 @@ export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onR
   }
 
   return (
-    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Places from your photos"
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Places to check"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="sheet-head">
-        <h1 className="title small">Places from your photos</h1>
+        <h1 className="title small">Places to check</h1>
         <button className="text-button" onClick={onClose}>Done</button>
       </div>
 
       {scan?.running && (
         <div className="scan" role="status">
-          <p>Reading your photos{scan.total ? ` · ${scan.done} of ${scan.total}` : '…'}</p>
+          <p>{scan.label || 'Reading your photos'}{scan.total ? ` · ${scan.done} of ${scan.total}` : '…'}</p>
           <div className="bar"><div style={{ width: `${scan.total ? (scan.done / scan.total) * 100 : 5}%` }} /></div>
           <p className="hint">You can keep using Inkmap while this runs.</p>
         </div>
       )}
       {scan?.error && <p className="warn" role="alert">{scan.error}</p>}
-      {scan?.found != null && (
+      {scan?.timelineVisits != null && (
+        <p className="hint scan-summary">Read {plural(scan.timelineVisits, 'Timeline visit', 'Timeline visits')}{' · '}{plural(scan.found, 'new place', 'new places')}</p>
+      )}
+      {scan?.photos != null && (
         <p className="hint scan-summary">
           Read {plural(scan.photos, 'photo', 'photos')}{scan.videos ? ` and ${plural(scan.videos, 'video', 'videos')}` : ''}
           {' · '}{scan.located} with a location{' · '}{plural(scan.found, 'new place', 'new places')}
@@ -70,9 +74,13 @@ export default function Inbox({ suggestions, scan, where, onScan, onConfirm, onR
               <button className="secondary" onClick={() => onScan('folder')}>Choose a folder</button>
             </>
           )}
+          <p className="hint">Google Maps Timeline: on your phone open Settings, Location, Location services, Timeline, then Export Timeline data. Pick the Timeline.json file it saves.</p>
+          <button className="secondary" onClick={() => timelineRef.current.click()}>Import Google Maps Timeline</button>
           <button className="primary" onClick={start}>{scansLibrary ? 'Look through my photos' : 'Choose photos'}</button>
         </div>
       )}
+      <input ref={timelineRef} type="file" accept=".json,application/json" multiple hidden
+        onChange={e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) onTimeline(files); }} />
       <input ref={fileRef} type="file" accept="image/*" multiple hidden
         onChange={e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) onScan(files); }} />
     </motion.div>
@@ -101,7 +109,7 @@ function Card({ s, where, behind, onConfirm, onReject }) {
       <p className="suggestion-name">{s.name}</p>
       <p className="result-where">{where}</p>
       <p className="suggestion-date">{describeDates(s)}</p>
-      <p className="hint">{plural(s.photos, 'photo', 'photos')}</p>
+      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline' : plural(s.photos, 'photo', 'photos')}</p>
     </motion.div>
   );
 }

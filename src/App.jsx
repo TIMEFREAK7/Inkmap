@@ -12,7 +12,7 @@ import Family from './Family.jsx';
 import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
 import Inbox from './Inbox.jsx';
-import { findPhotoTrips } from './photos.js';
+import { findPhotoTrips, importTimeline } from './photos.js';
 import { km, HOME_KM } from './backfill.js';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
@@ -93,6 +93,17 @@ export default function App() {
       scheduleBackup();
     } catch (e) {
       setScan(e.message === 'No folder chosen' ? null : { error: `Could not read photos: ${e.message}` });
+    }
+    reloadSuggestions();
+  }
+
+  async function timelineImport(files) {
+    setScan({ running: true, label: 'Reading your Timeline', done: 0, total: 0 });
+    try {
+      setScan(await importTimeline(places, countries, files));
+      scheduleBackup();
+    } catch (e) {
+      setScan({ error: e.message });
     }
     reloadSuggestions();
   }
@@ -220,8 +231,8 @@ export default function App() {
         <div className="bottom">
           {tab === 'globe' && (scan?.running || suggestions.length > 0) && (
             <button className="inbox-pill" onClick={() => setInbox(true)}>
-              {scan?.running ? `Reading photos${scan.total ? ` · ${Math.round((scan.done / scan.total) * 100)}%` : '…'}`
-                : `${suggestions.length} ${suggestions.length === 1 ? 'place' : 'places'} from your photos to check`}
+              {scan?.running ? `${scan.label || 'Reading photos'}${scan.total ? ` · ${Math.round((scan.done / scan.total) * 100)}%` : '…'}`
+                : `${suggestions.length} ${suggestions.length === 1 ? 'place' : 'places'} to check`}
             </button>
           )}
           {visits.length === 0 && tab === 'globe' && <p className="empty">Tap + to add your first place</p>}
@@ -239,7 +250,7 @@ export default function App() {
           {country && <CountryView key={country} code={country} countries={countries} visits={visits} colour={profile.colour}
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
-          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos}
+          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport}
             onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onClose={() => setInbox(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
             onPhotos={() => { setSettings(false); setInbox(true); }}
