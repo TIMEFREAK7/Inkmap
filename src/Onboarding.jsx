@@ -55,6 +55,7 @@ export default function Onboarding({ onDone }) {
   if (step === 'welcome') {
     return (
       <Screen>
+        <img className="logo" src="./icon-192.png" alt="" width="96" height="96" />
         <h1 className="title">Inkmap</h1>
         <p className="lead">Your map of every place you've been. Everything stays on this phone.</p>
         <div className="actions">

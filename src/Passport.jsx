@@ -32,7 +32,9 @@ export function InkFilter() {
   );
 }
 
-export default function Passport({ profile, visits, family, countries }) {
+import Empty from './Empty.jsx';
+
+export default function Passport({ profile, visits, family, countries, onAdd }) {
   const people = [{ id: profile.friendId, name: profile.name, colour: profile.colour, visits }, ...family.map(f => ({ id: f.friendId, name: f.name, colour: f.colour, visits: f.visits }))];
   const [who, setWho] = useState(profile.friendId);
   const person = people.find(p => p.id === who) ?? people[0];
@@ -51,9 +53,13 @@ export default function Passport({ profile, visits, family, countries }) {
           ))}
         </div>
       )}
-      <p className="result-where">{stamps.length} {stamps.length === 1 ? 'stamp' : 'stamps'}, in the order {person.id === profile.friendId ? 'you' : person.name} first visited</p>
+      {stamps.length > 0 && <p className="result-where">{stamps.length} {stamps.length === 1 ? 'stamp' : 'stamps'}, in the order {person.id === profile.friendId ? 'you' : person.name} first visited</p>}
       {stamps.length === 0 ? (
-        <p className="hint">Stamps appear here when a first place is logged.</p>
+        person.id === profile.friendId ? (
+          <Empty title="No stamps yet" text="Every country you visit gets a stamp here, in the order you first went.">
+            <button className="primary" onClick={onAdd}>Add a place</button>
+          </Empty>
+        ) : <p className="hint">{person.name} hasn't logged a country yet.</p>
       ) : (
         <div className="stamp-page">
           {stamps.map((s, i) => (

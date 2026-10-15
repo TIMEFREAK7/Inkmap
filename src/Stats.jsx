@@ -1,10 +1,25 @@
 import { motion } from 'motion/react';
-import { continentProgress, CONTINENT_HUES } from './visits.js';
+import { continentProgress, CONTINENT_HUES, byYear } from './visits.js';
+import Empty from './Empty.jsx';
 
-export default function Stats({ s, countries, visits, onCountry }) {
+export default function Stats({ s, countries, visits, onCountry, onAdd, onFind }) {
   const progress = continentProgress(s.visitedCodes, countries.list);
   const latest = {}; // newest visit date per country, to sort the list
   for (const v of visits) if (v.exitedAirport && !(latest[v.countryCode] >= v.dateFrom)) latest[v.countryCode] = v.dateFrom;
+
+  if (s.countries === 0) {
+    return (
+      <div className="screen stats">
+        <h1 className="title small">Places I've been</h1>
+        <Empty title="Nothing here yet" text="Add the places you've been and this page fills in: countries, continents and a timeline by year.">
+          <button className="primary" onClick={onAdd}>Add a place</button>
+          <button className="secondary" onClick={onFind}>Find them in my photos</button>
+        </Empty>
+      </div>
+    );
+  }
+  const years = byYear(visits);
+  const most = Math.max(...years.map(y => y.cities));
 
   return (
     <div className="screen stats">
@@ -21,8 +36,25 @@ export default function Stats({ s, countries, visits, onCountry }) {
         {progress.map(p => <Ring key={p.continent} {...p} />)}
       </div>
 
+      <h2 className="list-title">By year</h2>
+      <ol className="years">
+        {years.map((y, i) => (
+          <li key={y.year} className="year">
+            <span className="year-label">{y.year}</span>
+            <span className="year-bar-track">
+              {/* Bars grow when the screen opens (transform only: no layout work per frame). */}
+              <motion.span className="year-bar" style={{ width: `${(y.cities / most) * 100}%` }}
+                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }} />
+            </span>
+            <span className="year-text">
+              {y.cities} {y.cities === 1 ? 'city' : 'cities'} · {y.countries} {y.countries === 1 ? 'country' : 'countries'}
+              {y.newCountries > 0 && <b> · {y.newCountries} new</b>}
+            </span>
+          </li>
+        ))}
+      </ol>
+
       <h2 className="list-title">Countries</h2>
-      {s.countries === 0 && <p className="hint">Countries you visit will be listed here.</p>}
       {progress.filter(p => p.visited).map(p => (
         // Collapsed by default so a long list never pushes the next continent far down; tap to open.
         <details key={p.continent} className="group">

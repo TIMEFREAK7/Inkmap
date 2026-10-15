@@ -117,7 +117,7 @@ export default function BoardingScan({ onCode, onClose }) {
   }
 
   return (
-    <motion.div className="sheet scan-sheet" {...drag.sheet} role="dialog" aria-label="Scan a boarding pass"
+    <motion.div className="sheet scan-sheet" {...drag.sheet} role="dialog" aria-modal="true" aria-label="Scan a boarding pass"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="sheet-head">

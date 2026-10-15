@@ -6,7 +6,7 @@ import { today } from './dates.js';
 import DateFields from './DateFields.jsx';
 
 // Search-first logging: type, pick, save. The date defaults to today.
-export default function AddVisit({ places, countries, recent, onSave, onClose }) {
+export default function AddVisit({ places, countries, recent, onSave, onClose, onFind }) {
   const drag = useSheetDrag(onClose);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -26,7 +26,7 @@ export default function AddVisit({ places, countries, recent, onSave, onClose })
   const list = query.trim() ? results : recent;
 
   return (
-    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Add a place"
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-modal="true" aria-label="Add a place"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
       transition={{ type: 'spring', stiffness: 400, damping: 40 }}
       // Focus only once the sheet is on screen; focusing mid-slide makes the browser scroll the whole app.
@@ -35,11 +35,17 @@ export default function AddVisit({ places, countries, recent, onSave, onClose })
       {!picked ? (
         <>
           <div className="search-row">
-            <input ref={input} className="search" type="search" enterKeyHint="search" placeholder="Search a city or town"
+            <input ref={input} className="search" type="search" enterKeyHint="search" placeholder="Search a city or town" aria-label="Search a city or town"
               aria-label="Search a city or town" value={query} onChange={e => setQuery(e.target.value)} />
             <button className="text-button" onClick={onClose}>Cancel</button>
           </div>
           {!places && <p className="hint">Getting places ready…</p>}
+          {!query.trim() && (
+            <button className="find-row" onClick={onFind}>
+              <span className="result-name">Find places you've been</span>
+              <span className="result-where">From your photos, boarding passes, calendar or Google Maps Timeline</span>
+            </button>
+          )}
           {!query.trim() && recent.length > 0 && <h2 className="list-title">Recent places</h2>}
           {query.trim() && places && results.length === 0 && <p className="hint">No place called “{query.trim()}”. Try another spelling.</p>}
           <ul className="results">

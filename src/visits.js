@@ -69,3 +69,18 @@ export function passportStamps(visits) {
   }
   return [...first.values()].sort((a, b) => a.first.localeCompare(b.first) || a.code.localeCompare(b.code));
 }
+
+// Timeline: per year, newest first: cities and countries visited that year, and countries visited for the first time.
+export function byYear(visits) {
+  const counted = visits.filter(v => v.exitedAirport).sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
+  const years = new Map(), seen = new Set();
+  for (const v of counted) {
+    const y = v.dateFrom.slice(0, 4);
+    const row = years.get(y) || years.set(y, { year: +y, cities: new Set(), countries: new Set(), newCountries: 0 }).get(y);
+    row.cities.add(v.geonameId);
+    row.countries.add(v.countryCode);
+    if (!seen.has(v.countryCode)) { seen.add(v.countryCode); row.newCountries++; }
+  }
+  return [...years.values()].sort((a, b) => b.year - a.year)
+    .map(r => ({ year: r.year, cities: r.cities.size, countries: r.countries.size, newCountries: r.newCountries }));
+}

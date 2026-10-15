@@ -31,7 +31,7 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
   }
 
   return (
-    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Settings"
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-modal="true" aria-label="Settings"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="sheet-head">

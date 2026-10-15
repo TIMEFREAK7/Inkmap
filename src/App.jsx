@@ -11,6 +11,7 @@ import EditVisit from './EditVisit.jsx';
 import Family from './Family.jsx';
 import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
+import { GlobeIcon, StatsIcon, FamilyIcon, StampIcon } from './icons.jsx';
 import Inbox from './Inbox.jsx';
 import BoardingScan from './BoardingScan.jsx';
 import { findPhotoTrips, importTimeline, importBoardingPass, importCalendar } from './photos.js';
@@ -249,8 +250,8 @@ export default function App() {
         </header>
         {showFps && <FpsMeter />}
         {error && <p className="error" role="alert">Something went wrong loading the map data: {String(error)}</p>}
-        {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} />}
-        {tab === 'passport' && countries && <Passport profile={profile} visits={visits} family={family} countries={countries} />}
+        {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} onAdd={() => setAdding(true)} onFind={() => setInbox(true)} />}
+        {tab === 'passport' && countries && <Passport profile={profile} visits={visits} family={family} countries={countries} onAdd={() => setAdding(true)} />}
         {tab === 'family' && countries && <Family profile={profile} visits={visits} family={family} countries={countries} onChanged={reloadFamily} />}
 
         <div className="bottom">
@@ -262,16 +263,17 @@ export default function App() {
           )}
           {visits.length === 0 && tab === 'globe' && <p className="empty">Tap + to add your first place</p>}
           <nav className="tabs" aria-label="Screens">
-            <button className={tab === 'globe' ? 'tab on' : 'tab'} aria-current={tab === 'globe'} onClick={() => setTab('globe')}>Globe</button>
-            <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
+            <button className={tab === 'globe' ? 'tab on' : 'tab'} aria-current={tab === 'globe'} onClick={() => setTab('globe')}><GlobeIcon />Globe</button>
+            <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats'} onClick={() => setTab('stats')}><StatsIcon />Stats</button>
             <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
-            <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family'} onClick={() => setTab('family')}>Family</button>
-            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport'} onClick={() => setTab('passport')}>Stamps</button>
+            <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family'} onClick={() => setTab('family')}><FamilyIcon />Family</button>
+            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport'} onClick={() => setTab('passport')}><StampIcon />Stamps</button>
           </nav>
         </div>
 
         <AnimatePresence>
-          {adding && <AddVisit places={places} countries={countries} recent={recent} onSave={save} onClose={() => setAdding(false)} />}
+          {adding && <AddVisit places={places} countries={countries} recent={recent} onSave={save} onClose={() => setAdding(false)}
+            onFind={() => { setAdding(false); setInbox(true); }} />}
           {country && <CountryView key={country} code={country} countries={countries} visits={visits} colour={profile.colour}
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}

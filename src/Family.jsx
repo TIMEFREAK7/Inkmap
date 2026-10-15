@@ -125,7 +125,7 @@ export default function Family({ profile, visits, family, countries, onChanged }
 function Dialog({ title, text, confirm, danger, onConfirm, onCancel }) {
   return (
     <div className="scrim" onClick={onCancel}>
-      <div className="dialog" role="alertdialog" aria-label={title} onClick={e => e.stopPropagation()}>
+      <div className="dialog" role="alertdialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
         <h2 className="dialog-title">{title}</h2>
         <p className="hint">{text}</p>
         <button className={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirm}</button>

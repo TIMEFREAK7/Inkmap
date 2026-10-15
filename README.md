@@ -3,7 +3,6 @@
 A personal, fully offline travel log. Log the cities you've visited; the app shades a globe, a world map and each country.
 Runs on Android (Capacitor), Windows (Electron) and the web (Vercel), from one codebase. No backend, no accounts, no network calls.
 
-**Status: Tier 0 (feasibility).** The app is currently a test screen: the globe with every country filled, a frame-rate meter, and the place-data load time.
 
 ## Develop
 
@@ -32,6 +31,15 @@ npm run data         # writes public/data and prints file sizes
 | `airports.tsv` | OurAirports | Airports with an IATA code that are large, medium or have scheduled service |
 
 Continent rule: M49 region, with Northern America, Central America and the Caribbean → North America. Antarctica (no M49 region) → Antarctica, Taiwan → Asia, Kosovo → Europe.
+
+## Icons
+
+`resources/icon-foreground.svg` is the one source for every icon: Android launcher (adaptive and legacy) and splash,
+web/PWA icons and favicon, and the Windows installer (`build/icon.png`). After changing it:
+
+```sh
+node scripts/icons.mjs   # needs the playwright package and a Chromium (set CHROMIUM=/path/to/chrome if not found)
+```
 
 ## Builds and releases
 

@@ -65,6 +65,7 @@
       "dist/**",
       "electron/**"
     ],
+    "icon": "build/icon.png",
     "win": {
       "target": "nsis"
     },

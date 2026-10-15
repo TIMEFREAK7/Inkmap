@@ -10,7 +10,7 @@ export default function EditVisit({ visit, where, onSave, onDelete, onClose }) {
   const [note, setNote] = useState(visit.note || '');
 
   return (
-    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label={`Edit ${visit.name}`}
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-modal="true" aria-label={`Edit ${visit.name}`}
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="confirm">

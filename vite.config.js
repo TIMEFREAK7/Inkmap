@@ -8,9 +8,14 @@ export default defineConfig({
     react(),
     VitePWA({
       injectRegister: false, // registered in main.jsx, web only
-      manifest: { name: 'Inkmap', short_name: 'Inkmap', background_color: '#0b1026', theme_color: '#0b1026', display: 'standalone' },
+      manifest: { name: 'Inkmap', short_name: 'Inkmap', background_color: '#0b1026', theme_color: '#0b1026', display: 'standalone',
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ] },
       workbox: {
-        globPatterns: ['**/*.{js,mjs,css,html,json,tsv,svg,woff2,wasm}'], // wasm: the barcode reader
+        globPatterns: ['**/*.{js,mjs,css,html,json,tsv,svg,png,woff2,wasm}'], // wasm: the barcode reader
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // places.tsv is ~11 MB
         // State/district borders are 175 MB across 201 countries: cache each country when its view first opens
         // instead of downloading them all on the first visit.

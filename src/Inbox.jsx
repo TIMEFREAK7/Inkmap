@@ -23,11 +23,11 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
   }
 
   return (
-    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-label="Places to check"
+    <motion.div className="sheet" {...drag.sheet} role="dialog" aria-modal="true" aria-label="Places to check"
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="sheet-head">
-        <h1 className="title small">Places to check</h1>
+        <h1 className="title small">{top ? 'Places to check' : "Find places you've been"}</h1>
         <button className="text-button" onClick={onClose}>Done</button>
       </div>
 
@@ -98,7 +98,7 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
       )}
       {asking && (
         <div className="scrim">
-          <div className="dialog" role="alertdialog" aria-label="Did you leave the airport?">
+          <div className="dialog" role="alertdialog" aria-modal="true" aria-label="Did you leave the airport?">
             <h2 className="dialog-title">Did you leave the airport in {asking.name}?</h2>
             <p className="hint">Only places where you went outside the airport count toward your countries and cities.</p>
             <button className="primary" onClick={() => { confirm(asking, true); setAsking(null); }}>Yes, I went into {asking.name}</button>

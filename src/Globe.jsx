@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { nightPolygon } from './sun.js';
 
 // MapLibre only finds its own worker over http(s); Electron loads from file://, so point it at the bundled copy.
 setWorkerUrl(workerUrl);
@@ -20,7 +21,7 @@ function style(geo, visited, colour) {
     version: 8,
     projection: { type: 'globe' },
     sky: { 'atmosphere-blend': 0.6 },
-    sources: { countries: { type: 'geojson', data: geo } },
+    sources: { countries: { type: 'geojson', data: geo }, night: { type: 'geojson', data: nightPolygon(new Date()) } },
     layers: [
       { id: 'space', type: 'background', paint: { 'background-color': '#0b1026' } },
       {
@@ -31,6 +32,8 @@ function style(geo, visited, colour) {
         },
       },
       { id: 'border', type: 'line', source: 'countries', paint: { 'line-color': '#0b1026', 'line-width': 0.5 } },
+      // The night side, following the real time of day; visited colours still show through.
+      { id: 'night', type: 'fill', source: 'night', paint: { 'fill-color': '#02040f', 'fill-opacity': 0.45, 'fill-antialias': false } },
     ],
   };
 }
@@ -97,7 +100,8 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
     // Remember where the globe faced, for the next launch.
     const leave = () => { if (document.hidden) { const c = map.getCenter(); onLeaveRef.current?.([c.lng, c.lat]); } };
     document.addEventListener('visibilitychange', leave);
-    return () => { document.removeEventListener('visibilitychange', leave); stopSpin(); map.remove(); };
+    const night = setInterval(() => map.getSource('night')?.setData(nightPolygon(new Date())), 60000); // moves 0.25° a minute
+    return () => { clearInterval(night); document.removeEventListener('visibilitychange', leave); stopSpin(); map.remove(); };
     // The map is built once; visited/colour/focus changes are applied by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo]);

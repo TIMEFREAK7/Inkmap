@@ -49,3 +49,14 @@ describe('search ranking', () => {
     expect(search(index, 'm').slice(0, 3).every(p => /^m/i.test(p.name))).toBe(true);
   });
 });
+
+import { byYear } from '../src/visits.js';
+describe('timeline by year', () => {
+  it('counts cities, countries and first visits per year, newest first, layovers left out', () => {
+    const v = (id, cc, date, exitedAirport = true) => ({ geonameId: id, countryCode: cc, dateFrom: date, exitedAirport });
+    expect(byYear([v(1, 'IN', '2023-01-01'), v(2, 'FR', '2024-05-01'), v(1, 'IN', '2024-06-01'), v(3, 'FR', '2024-06-02'), v(4, 'AE', '2024-07-01', false)])).toEqual([
+      { year: 2024, cities: 3, countries: 2, newCountries: 1 },
+      { year: 2023, cities: 1, countries: 1, newCountries: 1 },
+    ]);
+  });
+});
