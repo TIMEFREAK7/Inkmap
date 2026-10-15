@@ -294,3 +294,8 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 .viewfinder { position: relative; flex: 1; min-height: 240px; margin: 12px 0 8px; border-radius: 20px; overflow: hidden; background: #000; }
 .viewfinder video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .scan-sheet .hint { margin: 4px; }
+.inbox-empty { min-height: 0; }
+.sources-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.sources-list p { margin: 0 4px; font-size: 18px; }
+.sources-list .hint { margin: 8px 4px 0; font-size: 16px; }
+.inbox-empty > .primary { flex: none; margin-top: 8px; }

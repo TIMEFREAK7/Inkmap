@@ -64,23 +64,26 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
         </>
       ) : !scan?.running && (
         <div className="inbox-empty">
-          {scan?.found === 0 && <p>No new places found.</p>}
-          {scan?.found > 0 && <p>All done. Every place has been checked.</p>}
-          <p className="hint">
-            {scansLibrary
-              ? 'Inkmap reads where and when each photo on this phone was taken, and suggests the cities. Only the place and date are kept; your photos never leave the phone and are not copied.'
-              : 'Pick photos and Inkmap reads where and when each one was taken, and suggests the cities. Only the place and date are kept; the photos are not copied.'}
-          </p>
-          {scansLibrary && (
-            <>
-              <p className="hint">Photos missing? Some phones hide part of the camera roll from other apps. Pick the folder itself (usually DCIM, then Camera) and Inkmap reads every file in it.</p>
-              <button className="secondary" onClick={() => onScan('folder')}>Choose a folder</button>
-            </>
-          )}
-          <p className="hint">Boarding passes: scan the barcode on a paper pass, or a screenshot of one from an airline app.</p>
-          <button className="secondary" onClick={onBoarding}>Scan a boarding pass</button>
-          <p className="hint">Google Maps Timeline: on your phone open Settings, Location, Location services, Timeline, then Export Timeline data. Pick the Timeline.json file it saves.</p>
-          <button className="secondary" onClick={() => timelineRef.current.click()}>Import Google Maps Timeline</button>
+          {/* The sources scroll; the main action stays pinned in the thumb zone, whatever the font size. */}
+          <div className="sources-list">
+            {scan?.found === 0 && <p>No new places found.</p>}
+            {scan?.found > 0 && <p>All done. Every place has been checked.</p>}
+            <p className="hint">
+              {scansLibrary
+                ? 'Finds the cities where your photos were taken. Only the place and date are kept; photos never leave the phone.'
+                : 'Finds the cities where your photos were taken. Only the place and date are kept; photos are not copied.'}
+            </p>
+            {scansLibrary && (
+              <>
+                <p className="hint">Photos missing? Pick the camera folder itself: DCIM, then Camera.</p>
+                <button className="secondary" onClick={() => onScan('folder')}>Choose a folder</button>
+              </>
+            )}
+            <p className="hint">A paper boarding pass, or a screenshot of one from an airline app.</p>
+            <button className="secondary" onClick={onBoarding}>Scan a boarding pass</button>
+            <p className="hint">Export it from phone Settings → Location → Location services → Timeline, then pick Timeline.json.</p>
+            <button className="secondary" onClick={() => timelineRef.current.click()}>Import Google Maps Timeline</button>
+          </div>
           <button className="primary" onClick={start}>{scansLibrary ? 'Look through my photos' : 'Choose photos'}</button>
         </div>
       )}
