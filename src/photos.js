@@ -5,7 +5,9 @@ import exifr from 'exifr';
 import { db } from './db.js';
 import { PhotoScan } from './native.js';
 import { makeVisit } from './visits.js';
-import { unseenTrips } from './backfill.js';
+import { unseenTrips, km, HOME_KM } from './backfill.js';
+import { parseBoardingPass } from './boardingPass.js';
+import { today } from './dates.js';
 import { parseTimeline } from './timeline.js';
 
 // Android scans the whole library (the photo picker strips location); elsewhere the person picks files.
@@ -58,15 +60,30 @@ export async function importTimeline(places, countries, files) {
   return { timelineVisits: visits, found: await addSuggestions(places, countries, points, 'timeline') };
 }
 
+// A scanned boarding pass: one suggestion per flight, at the city its destination airport serves (not home).
+export async function importBoardingPass(places, countries, text) {
+  const legs = parseBoardingPass(text, today());
+  const cities = await places.airportCities(legs.map(l => l.to));
+  const home = (await db.settings.get('home'))?.value;
+  const trips = legs.filter(l => cities[l.to] && !(home && km(cities[l.to].lat, cities[l.to].lon, home.lat, home.lon) < HOME_KM))
+    .map(l => ({ place: cities[l.to], dateFrom: l.date, dateTo: l.date, flight: { carrier: l.carrier, number: l.flight, from: l.from, to: l.to } }));
+  return { legs, found: await saveTrips(countries, trips, 'boardingPass') };
+}
+
 // Points -> trips (home and airports skipped, consecutive days joined) -> new inbox suggestions. Returns how many.
 async function addSuggestions(places, countries, points, source) {
   const home = (await db.settings.get('home'))?.value;
   const { trips } = await places.trips(points, home);
+  return saveTrips(countries, trips, source);
+}
+
+async function saveTrips(countries, trips, source) {
   const fresh = unseenTrips(trips, await db.visits.toArray(), await db.suggestions.toArray());
   await db.suggestions.bulkAdd(fresh.map(t => ({
     ...makeVisit(t.place, countries.byCode[t.place.cc], { date: t.dateFrom, dateTo: t.dateTo === t.dateFrom ? undefined : t.dateTo, source }),
     status: 'pending',
     photos: t.photos, // points behind the trip: photos, or days of Timeline stays
+    flight: t.flight, // boarding passes: carrier, number, from, to (never the passenger's name)
   })));
   return fresh.length;
 }

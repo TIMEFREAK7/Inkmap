@@ -99,7 +99,7 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
               </ul>
             )}
           </details>
-          <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source. Fonts: Inter and Space Grotesk (SIL Open Font License). Flags: flag-icons (MIT).</p>
+          <p className="hint">Built with React, MapLibre GL JS, Dexie, Motion and Capacitor, all free and open-source. Fonts: Inter and Space Grotesk (SIL Open Font License). Flags: flag-icons (MIT). Photo data read with exifr (MIT). Boarding pass barcodes read with zxing-wasm (MIT), built from zxing-cpp (Apache-2.0).</p>
           <label className="check">
             <input type="checkbox" checked={showFps} onChange={e => onShowFps(e.target.checked)} />
             Show frame rate (for testing a phone)

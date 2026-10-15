@@ -1,5 +1,6 @@
 // Backfill from photos: points (lat, lon, day) -> suggested trips. Pure, so the places worker and the tests share it.
 import { addDays } from './dates.js';
+import { norm } from './search.js';
 
 export const AIRPORT_KM = 3; // photos this close to an airport are skipped: a layover is not a visit
 export const HOME_KM = 25; // photos around your home town (suburbs included) are everyday life, not trips
@@ -46,6 +47,18 @@ export function cityAt(places, lat, lon) {
     if (score > bestScore) { best = p; bestScore = score; }
   }
   return best;
+}
+
+// The city an airport serves: the place named in its OurAirports city within ~80 km (Bengaluru for BLR, 30 km out),
+// else the city around it.
+export function airportCity(places, airport) {
+  const want = norm(airport.city || '');
+  let best = null;
+  for (const p of around(places, airport.lat, airport.lon)) {
+    if (p.section || !want || km(airport.lat, airport.lon, p.lat, p.lon) > 80) continue;
+    if ((norm(p.name) === want || norm(p.ascii) === want || p.alts.some(a => norm(a) === want)) && (!best || p.pop > best.pop)) best = p;
+  }
+  return best || cityAt(places, airport.lat, airport.lon);
 }
 
 // One trip per city per run of consecutive days with photos there.

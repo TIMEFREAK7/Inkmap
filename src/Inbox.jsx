@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
 import { describeDates } from './visits.js';
@@ -8,7 +8,10 @@ import { scansLibrary } from './photos.js';
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // Suggestions inbox: one card at a time. Swipe right (or tap Yes) to add it as a visit, left (or Not me) to drop it.
-export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onConfirm, onReject, onHome, onClose }) {
+export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onBoarding, onConfirm: confirm, onReject, onHome, onClose }) {
+  const [asking, setAsking] = useState(null); // boarding pass suggestion waiting for "Did you leave the airport?"
+  // A boarding pass alone doesn't show the person left the airport, so confirming asks.
+  const onConfirm = s => (s.source === 'boardingPass' ? setAsking(s) : confirm(s));
   const drag = useSheetDrag(onClose);
   const fileRef = useRef(null);
   const timelineRef = useRef(null);
@@ -74,9 +77,21 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
               <button className="secondary" onClick={() => onScan('folder')}>Choose a folder</button>
             </>
           )}
+          <p className="hint">Boarding passes: scan the barcode on a paper pass, or a screenshot of one from an airline app.</p>
+          <button className="secondary" onClick={onBoarding}>Scan a boarding pass</button>
           <p className="hint">Google Maps Timeline: on your phone open Settings, Location, Location services, Timeline, then Export Timeline data. Pick the Timeline.json file it saves.</p>
           <button className="secondary" onClick={() => timelineRef.current.click()}>Import Google Maps Timeline</button>
           <button className="primary" onClick={start}>{scansLibrary ? 'Look through my photos' : 'Choose photos'}</button>
+        </div>
+      )}
+      {asking && (
+        <div className="scrim">
+          <div className="dialog" role="alertdialog" aria-label="Did you leave the airport?">
+            <h2 className="dialog-title">Did you leave the airport in {asking.name}?</h2>
+            <p className="hint">Only places where you went outside the airport count toward your countries and cities.</p>
+            <button className="primary" onClick={() => { confirm(asking, true); setAsking(null); }}>Yes, I went into {asking.name}</button>
+            <button className="secondary" onClick={() => { confirm(asking, false); setAsking(null); }}>No, I only changed planes</button>
+          </div>
         </div>
       )}
       <input ref={timelineRef} type="file" accept=".json,application/json" multiple hidden
@@ -109,7 +124,8 @@ function Card({ s, where, behind, onConfirm, onReject }) {
       <p className="suggestion-name">{s.name}</p>
       <p className="result-where">{where}</p>
       <p className="suggestion-date">{describeDates(s)}</p>
-      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline' : plural(s.photos, 'photo', 'photos')}</p>
+      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline'
+        : s.flight ? `Flight ${s.flight.carrier} ${s.flight.number} · ${s.flight.from} → ${s.flight.to}` : plural(s.photos, 'photo', 'photos')}</p>
     </motion.div>
   );
 }

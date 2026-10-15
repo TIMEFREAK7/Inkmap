@@ -52,11 +52,14 @@ export function startPlaces() {
     pending.clear();
   };
   // Absolute URL: the worker's own base is assets/.
+  const airportsUrl = new URL(url('airports.tsv'), document.baseURI).href;
   return ask({ type: 'load', url: new URL(url('places.tsv'), document.baseURI).href }).then(({ count, ms }) => ({
     count, ms,
     search: query => ask({ type: 'search', query }).then(r => r.results),
     // points: [{ lat, lon, day }] from photos, home: { lat, lon } or null -> { trips, skipped } (see backfill.js)
-    trips: (points, home) => ask({ type: 'trips', points, home, airportsUrl: new URL(url('airports.tsv'), document.baseURI).href }),
+    trips: (points, home) => ask({ type: 'trips', points, home, airportsUrl }),
+    // IATA codes -> { code: place } for the city each airport serves
+    airportCities: codes => ask({ type: 'airportCities', codes, airportsUrl }).then(r => r.cities),
   }));
 }
 

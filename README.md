@@ -65,6 +65,8 @@ Vercel deploys `main` (framework preset: Vite, output `dist`). A service worker 
 | mapshaper (build-time only) | MPL-2.0 |
 | Inter, Space Grotesk fonts (Fontsource) | SIL OFL 1.1 |
 | flag-icons | MIT |
+| exifr (photo location and date) | MIT |
+| zxing-wasm (boarding pass barcodes; built from zxing-cpp, Apache-2.0) | MIT |
 | GeoNames data | CC BY 4.0 — © GeoNames, geonames.org |
 | Natural Earth data | Public domain |
 | geoBoundaries (gbOpen) | Per country: CC BY, ODbL, OGL, Etalab, public domain and others, all open; full list in `public/data/boundary-sources.json` |

@@ -12,7 +12,8 @@ import Family from './Family.jsx';
 import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
 import Inbox from './Inbox.jsx';
-import { findPhotoTrips, importTimeline } from './photos.js';
+import BoardingScan from './BoardingScan.jsx';
+import { findPhotoTrips, importTimeline, importBoardingPass } from './photos.js';
 import { km, HOME_KM } from './backfill.js';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
@@ -38,6 +39,7 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [celebrate, setCelebrate] = useState(null); // new country / continent just logged
   const [inbox, setInbox] = useState(false);
+  const [boarding, setBoarding] = useState(false); // boarding pass scanner open
   const [suggestions, setSuggestions] = useState([]); // pending, newest trip first
   const [scan, setScan] = useState(null); // photo scan: { running, done, total } then { photos, videos, located, found } or { error }
   const [start, setStart] = useState(undefined); // where the globe faced last time; undefined while loading
@@ -68,13 +70,13 @@ export default function App() {
       .map(v => ({ id: v.geonameId, name: v.name, cc: v.countryCode, admin1: v.admin1Code, lat: v.lat, lon: v.lon }));
   }, [visits]);
 
-  async function save(place, date, dateTo, source) {
-    const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo, source });
+  async function save(place, date, dateTo, source, exitedAirport = true) {
+    const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo, source, exitedAirport });
     const counted = visits.filter(v => v.exitedAirport);
     const newCountry = !counted.some(v => v.countryCode === visit.countryCode);
     const newContinent = !counted.some(v => v.continent === visit.continent);
     await db.visits.add(visit);
-    if (newCountry) setCelebrate({ code: visit.countryCode, continent: visit.continent, first: visit.dateFrom, newCountry, newContinent });
+    if (newCountry && exitedAirport) setCelebrate({ code: visit.countryCode, continent: visit.continent, first: visit.dateFrom, newCountry, newContinent });
     scheduleBackup();
     setAdding(false);
     setFocus({ lon: place.lon, lat: place.lat });
@@ -108,10 +110,21 @@ export default function App() {
     reloadSuggestions();
   }
 
-  async function confirmSuggestion(sg) {
+  // A boarding pass returns { found, legs }; the scanner shows what was read.
+  async function boardingPassCode(text) {
+    const { legs, found } = await importBoardingPass(places, countries, text);
+    scheduleBackup();
+    reloadSuggestions();
+    const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    const read = legs.map(l => `${l.from} → ${l.to} (${l.carrier} ${l.flight}, ${fmt(l.date)})`).join(', ');
+    return found ? `Read ${read}. ${found} new ${found === 1 ? 'place' : 'places'} to check.` : `Read ${read}. Nothing new: it's already in your places or it's your home town.`;
+  }
+
+  // exited: false for a boarding pass stop where the person only changed planes (kept, but not counted).
+  async function confirmSuggestion(sg, exited = true) {
     const place = { id: sg.geonameId, name: sg.name, cc: sg.countryCode, admin1: sg.admin1Code, lat: sg.lat, lon: sg.lon };
     await db.suggestions.update(sg.id, { status: 'confirmed' });
-    const visit = await save(place, sg.dateFrom, sg.dateTo, sg.source);
+    const visit = await save(place, sg.dateFrom, sg.dateTo, sg.source, exited);
     reloadSuggestions();
     setUndo({ text: `Added ${sg.name}`, run: () => Promise.all([db.visits.delete(visit.id), db.suggestions.update(sg.id, { status: 'pending' })]) });
   }
@@ -180,7 +193,8 @@ export default function App() {
   // Android back gesture (MainActivity): close the topmost screen; false means nothing was open, so leave the app.
   useEffect(() => {
     window.inkmapBack = () => {
-      if (editing) setEditing(null);
+      if (boarding) setBoarding(false);
+      else if (editing) setEditing(null);
       else if (country) setCountry(null);
       else if (adding) setAdding(false);
       else if (inbox) setInbox(false);
@@ -251,7 +265,8 @@ export default function App() {
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
           {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport}
-            onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onClose={() => setInbox(false)} />}
+            onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onBoarding={() => setBoarding(true)} onClose={() => setInbox(false)} />}
+          {boarding && <BoardingScan onCode={boardingPassCode} onClose={() => setBoarding(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}
             onPhotos={() => { setSettings(false); setInbox(true); }}
             showFps={showFps} onShowFps={on => { setShowFps(on); try { localStorage.setItem('inkmap.fps', on ? '1' : '0'); } catch { /* private mode */ } }} />}
@@ -262,7 +277,7 @@ export default function App() {
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
         <AnimatePresence>
           {undo && (
-            <motion.div className={adding || country || editing || settings || inbox ? 'undo low' : 'undo'} role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+            <motion.div className={adding || country || editing || settings || inbox || boarding ? 'undo low' : 'undo'} role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
               <span>{undo.text}</span>
               <button className="text-button" onClick={undoLast}>Undo</button>
             </motion.div>

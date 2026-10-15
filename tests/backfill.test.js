@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import { parsePlaces, parseAirports } from '../src/data.js';
-import { gridOf, cityAt, photoTrips, unseenTrips } from '../src/backfill.js';
+import { gridOf, cityAt, photoTrips, unseenTrips, airportCity } from '../src/backfill.js';
 
 const places = gridOf(parsePlaces(fs.readFileSync('public/data/places.tsv', 'utf8')));
+const airportList = parseAirports(fs.readFileSync('public/data/airports.tsv', 'utf8'));
 const airports = gridOf(parseAirports(fs.readFileSync('public/data/airports.tsv', 'utf8')));
 const at = (lat, lon) => cityAt(places, lat, lon)?.name;
 
@@ -41,5 +42,16 @@ describe('photo trips', () => {
     expect(unseenTrips(trips, [{ geonameId: paris, dateFrom: '2024-05-02' }], [])).toHaveLength(1);
     expect(unseenTrips(trips, [], [{ geonameId: paris, dateFrom: '2024-05-08', dateTo: '2024-05-10', status: 'rejected' }])).toHaveLength(1);
     expect(unseenTrips(trips, [{ geonameId: 1, dateFrom: '2024-05-01' }], [])).toHaveLength(2);
+  });
+});
+
+describe('airport to city', () => {
+  const city = iata => airportCity(places, airportList.find(a => a.iata === iata))?.name;
+  it('maps airports to the city they serve, even far out of town', () => {
+    expect(city('BLR')).toMatch(/Bengaluru|Bangalore/);
+    expect(city('BOM')).toBe('Mumbai');
+    expect(city('PNQ')).toBe('Pune');
+    expect(city('CDG')).toBe('Paris');
+    expect(city('JFK')).toBe('New York City');
   });
 });
