@@ -81,3 +81,6 @@ export const parseAirports = text => text.split('\n').slice(1).filter(Boolean).m
   const f = l.split('\t');
   return { iata: f[0], name: f[1], lat: +f[2], lon: +f[3], cc: f[4], city: f[5] };
 });
+
+// Cities of 150,000+ people as [lon, lat, size], for the globe's night-side lights.
+export const loadLights = () => fetch(url('lights.json')).then(r => r.json());

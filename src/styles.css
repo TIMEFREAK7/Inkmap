@@ -453,3 +453,11 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 .country-map, .family-map { border: 1px solid rgba(255, 255, 255, 0.1); }
 /* The avatar and counters on the globe get the same glass treatment as the tab bar */
 .avatar:not(.big):not(.small) { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.4); }
+
+/* The sun in space beside the globe (positioned by Globe.jsx; only when zoomed out enough to fit). */
+.globe-wrap { position: absolute; inset: 0; }
+.sun-orb {
+  position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, #fffbe8 0 28%, #ffe08a 42%, rgba(255, 196, 80, 0.35) 62%, transparent 72%);
+  box-shadow: 0 0 40px 14px rgba(255, 200, 90, 0.22); transition: opacity 400ms;
+}

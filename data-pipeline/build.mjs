@@ -103,6 +103,16 @@ function buildPlaces(codes) {
   return lines.length;
 }
 
+// --- City lights for the globe's night side: every city of 150,000+ people (sections like Karol Bagh left out) ---
+// [lon, lat, size 1-3] per city; size grows with population.
+export function buildLights() {
+  const rows = fs.readFileSync(path.join(OUT, 'places.tsv'), 'utf8').split('\n').slice(1).map(l => l.split('\t'));
+  const lights = rows.filter(f => f[9] !== 'x' && +f[7] >= 150000)
+    .map(f => [+(+f[4]).toFixed(2), +(+f[3]).toFixed(2), +f[7] >= 2000000 ? 3 : +f[7] >= 500000 ? 2 : 1]);
+  fs.writeFileSync(path.join(OUT, 'lights.json'), JSON.stringify(lights));
+  return lights.length;
+}
+
 // --- Boundaries (Natural Earth -> simplified TopoJSON) ---
 // Natural Earth splits some disputed or special areas off; give the inhabited ones to the country GeoNames uses.
 const UNIT_FIX = { SOL: 'SO', CYN: 'CY', CNM: 'CY', ESB: 'CY', WSB: 'CY', KOR: 'KR', PRK: 'KP', USG: 'CU', SYR: 'SY' };
@@ -204,11 +214,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   fs.writeFileSync(path.join(OUT, 'countries.json'), JSON.stringify(countries));
   const codes = new Set(countries.map(c => c.code));
   const places = buildPlaces(codes);
+  const lights = buildLights();
   const missing = buildBoundaries(codes);
   const regions = await buildRegions(countries);
   const airports = buildAirports();
   const admin1 = buildAdmin1();
-  console.log(`countries: ${countries.length}, places: ${places}, airports: ${airports}, admin1: ${admin1}, countries with states/districts: ${regions}`);
+  console.log(`countries: ${countries.length}, places: ${places}, city lights: ${lights}, airports: ${airports}, admin1: ${admin1}, countries with states/districts: ${regions}`);
   // Tiny entries with no Natural Earth shape still count; they just can't be shaded on the map.
   console.log('No boundary shape for:', missing.join(', ') || 'none');
   for (const f of fs.readdirSync(OUT)) if (f !== 'regions') console.log(`${f}: ${(fs.statSync(path.join(OUT, f)).size / 1048576).toFixed(2)} MB`);

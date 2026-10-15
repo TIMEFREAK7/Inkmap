@@ -23,17 +23,22 @@ const TWILIGHT = 18; // astronomical twilight: fully dark when the sun is 18° b
 export const MERCATOR_LAT = 85.0511; // the square world image covers Web Mercator's full latitude range
 
 // Night as an image: per pixel, how dark (0-255), for a w×h Web Mercator picture of the whole world.
-// The globe stretches it over the planet with smooth filtering, so the line fades softly through twilight,
-// and redrawing it once a minute costs one texture upload instead of re-tiling thousands of shapes.
-export function nightAlpha(date, w = 256, h = 256, max = 0.62) {
+// The globe stretches it over the planet with smooth filtering, so the line fades softly through twilight.
+// Works on the sine of the sun's height (no per-pixel trig): one multiply-add per pixel, a few ms per redraw.
+export function nightAlpha(date, w = 128, h = 128, max = 0.62) {
   const sun = subsolar(date);
+  const sinD = Math.sin(sun.lat * RAD), cosD = Math.cos(sun.lat * RAD);
+  const cosH = new Float64Array(w);
+  for (let x = 0; x < w; x++) cosH[x] = Math.cos((-180 + (360 * (x + 0.5)) / w - sun.lon) * RAD);
+  const lo = Math.sin(2 * RAD), span = lo + Math.sin(TWILIGHT * RAD); // dark from 2° above to 18° below the horizon
   const alpha = new Uint8ClampedArray(w * h);
   for (let y = 0; y < h; y++) {
-    const lat = Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + 0.5)) / h))) / RAD;
+    const lat = Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + 0.5)) / h)));
+    const a = Math.sin(lat) * sinD, b = Math.cos(lat) * cosD;
     for (let x = 0; x < w; x++) {
-      const lon = -180 + (360 * (x + 0.5)) / w;
-      const dark = Math.min(1, Math.max(0, (2 - sunAltitude(sun, lat, lon)) / (TWILIGHT + 2))); // starts just before sunset
-      alpha[y * w + x] = Math.round(dark * dark * (3 - 2 * dark) * max * 255); // smoothstep: no visible band edges
+      const t = (lo - (a + b * cosH[x])) / span; // 0 at the start of dusk, 1 at full night
+      const dark = t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t); // smoothstep: no visible band edges
+      alpha[y * w + x] = dark * max * 255;
     }
   }
   return alpha;
@@ -50,4 +55,27 @@ export function sunLight(date) {
   const polar = Math.acos(-v[2]) / RAD;
   const azimuth = Math.atan2(-v[1], -v[0]) / RAD - 90;
   return [1.5, azimuth, polar];
+}
+
+// City lights: the cities from data/lights.json ([lon, lat, size]) that are in darkness now, each with how dark
+// it is there (0-1), so lights come on through dusk and are brightest in full night.
+export function cityLights(date, lights) {
+  const sun = subsolar(date);
+  const features = [];
+  for (const [lon, lat, size] of lights) {
+    const dark = Math.min(1, Math.max(0, -sunAltitude(sun, lat, lon) / 10)); // lights fully on 10° after sunset
+    if (dark > 0.05) features.push({ type: 'Feature', properties: { dark, size }, geometry: { type: 'Point', coordinates: [lon, lat] } });
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+// Where the sun is, seen from the camera: { x, y } on screen (unit vector, y down) and `front` (true when the sun is
+// behind the viewer). center: the map's centre { lng, lat }; bearing in degrees.
+export function sunScreenDirection(date, center, bearing = 0) {
+  const s = subsolar(date);
+  const [la, d, c] = [s.lat * RAD, (s.lon - center.lng) * RAD, center.lat * RAD];
+  const x = Math.cos(la) * Math.sin(d), y = Math.sin(la), z = Math.cos(la) * Math.cos(d);
+  const y2 = y * Math.cos(c) - z * Math.sin(c), z2 = y * Math.sin(c) + z * Math.cos(c);
+  const b = bearing * RAD;
+  return { x: x * Math.cos(b) + y2 * Math.sin(b), y: -(-x * Math.sin(b) + y2 * Math.cos(b)), front: z2 > 0 };
 }

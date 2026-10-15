@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { subsolar, sunAltitude, nightAlpha, sunLight } from '../src/sun.js';
+import { subsolar, sunAltitude, nightAlpha, sunLight, cityLights, sunScreenDirection } from '../src/sun.js';
 
 // Darkness (0-1) at a place, read from the 360×360 Mercator image.
 const darkAt = (img, lon, lat, n = 360) => {
@@ -36,5 +36,21 @@ describe('day and night', () => {
     const light = [Math.sin(p) * Math.cos(a), Math.sin(p) * Math.sin(a), Math.cos(p)]; // MapLibre's sphericalToCartesian
     const sun = [Math.cos(s.lat * r) * Math.sin(s.lon * r), Math.sin(s.lat * r), Math.cos(s.lat * r) * Math.cos(s.lon * r)];
     light.forEach((c, i) => expect(c).toBeCloseTo(-sun[i], 6));
+  });
+  it('lights cities on the night side only', () => {
+    const date = new Date('2025-06-21T12:00:00Z'); // noon at Greenwich
+    const on = cityLights(date, [[0, 10, 1], [178, -10, 3]]).features;
+    expect(on).toHaveLength(1);
+    expect(on[0].geometry.coordinates).toEqual([178, -10]);
+    expect(on[0].properties.dark).toBe(1);
+  });
+  it('places the sun to the side of the globe it lights', () => {
+    const date = new Date('2025-06-21T12:00:00Z'); // sun over 0°E, 23°N
+    const east = sunScreenDirection(date, { lng: -110, lat: 0 }); // looking at the Americas: the sun is off to the right, behind
+    expect(east.x).toBeGreaterThan(0.8);
+    expect(east.front).toBe(false);
+    const up = sunScreenDirection(date, { lng: 0, lat: -60 }); // looking far south: the sun is up the screen
+    expect(up.y).toBeLessThan(0);
+    expect(sunScreenDirection(date, { lng: 0, lat: 20 }).front).toBe(true); // facing the sun: it's behind the viewer
   });
 });
