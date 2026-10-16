@@ -27,6 +27,14 @@
 
         </activity>
 
+        <!-- Home-screen widget with the counts (InkmapWidget, fed by WidgetPlugin). -->
+        <receiver android:name=".InkmapWidget" android:exported="false" android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

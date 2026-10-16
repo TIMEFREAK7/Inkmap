@@ -3,9 +3,8 @@ import { useBackHandler } from './sheet.jsx';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import { cssVar } from './theme.js';
 import { AnimatePresence, motion } from 'motion/react';
-import { Capacitor } from '@capacitor/core';
 import { db } from './db.js';
-import { FileShare } from './native.js';
+import { shareFile } from './native.js';
 import { scheduleBackup } from './backup.js';
 import { buildShare, parseShare, decideImport, applyImport } from './share.js';
 
@@ -29,12 +28,7 @@ export default function Family({ profile, visits, family, countries, onChanged }
     const data = JSON.stringify(buildShare(profile, visits));
     const name = `inkmap-${profile.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.inkshare`;
     try {
-      if (Capacitor.isNativePlatform()) return await FileShare.share({ name, data, title: 'Share my Inkmap' });
-      const file = new File([data], name, { type: 'application/octet-stream' });
-      if (navigator.canShare?.({ files: [file] })) return await navigator.share({ files: [file], title: 'My Inkmap' });
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(file), download: name });
-      a.click();
-      URL.revokeObjectURL(a.href);
+      await shareFile(new File([data], name, { type: 'application/octet-stream' }), 'Share my Inkmap');
     } catch (e) {
       if (e.name !== 'AbortError') setMessage(`Could not share: ${e.message}`);
     }

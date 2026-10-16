@@ -21,6 +21,8 @@ export async function writeBackup(fs, data) {
 // The folder the person picked (Android). It stays usable after a reinstall once picked again.
 export const folderFs = {
   write: (name, data) => BackupFolder.write({ name, data }),
+  writeBytes: (name, base64) => BackupFolder.write({ name, data: base64, base64: true }),
+  readBytes: name => BackupFolder.read({ name, base64: true }).then(r => r.data),
   read: name => BackupFolder.read({ name }).then(r => r.data),
   exists: name => BackupFolder.exists({ name }).then(r => r.exists),
   remove: name => BackupFolder.remove({ name }),
@@ -71,6 +73,7 @@ export async function backupNow() {
     const other = await conflictWith(data);
     if (other) throw new FolderConflict(other);
     await writeBackup(folderFs, JSON.stringify(data));
+    await writePendingPhotos();
     result = { ok: true, at: data.exportedAt };
   } catch (e) {
     result = { ok: false, error: e.message || String(e), conflict: e.found };
@@ -89,6 +92,39 @@ export function scheduleBackup() {
 // Leaving the app inside the 5 s window must not lose the change.
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => { if (document.hidden && timer) backupNow(); });
+}
+
+// --- Photos: one .jpg per photo next to the backup, written once (photos never change), removed with the photo ---
+
+export const photoFile = id => `inkmap-photo-${id}.jpg`;
+const base64Of = dataUrl => dataUrl.slice(dataUrl.indexOf(',') + 1);
+
+async function writePendingPhotos() {
+  for (const id of await db.photos.where('pending').equals(1).primaryKeys()) {
+    const p = await db.photos.get(id); // one at a time: all photos at once could be 100 MB
+    if (!p) continue;
+    await folderFs.writeBytes(photoFile(id), base64Of(p.data));
+    await db.photos.update(id, { pending: undefined });
+  }
+}
+
+// A new folder has none of the photo files yet.
+export const markAllPhotosPending = () => db.photos.toCollection().modify({ pending: 1 });
+
+export async function removePhotoFile(id) {
+  if (!hasBackupFolder) return;
+  try { await folderFs.remove(photoFile(id)); } catch { /* no folder, or already gone: a stray file is harmless */ }
+}
+
+// After restoring a backup: bring back each photo whose file is in the folder; a missing file is skipped.
+export async function restorePhotos(list) {
+  let missing = 0;
+  for (const { id, visitId } of list) {
+    try {
+      await db.photos.put({ id, visitId, data: `data:image/jpeg;base64,${await folderFs.readBytes(photoFile(id))}` });
+    } catch { missing++; }
+  }
+  return missing;
 }
 
 // The newest readable backup in the chosen folder: the main file, else .prev if the main one is damaged.

@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { continentProgress, CONTINENT_HUES, byYear } from './visits.js';
 import Empty from './Empty.jsx';
 
-export default function Stats({ s, countries, visits, onCountry, onAdd, onFind }) {
+export default function Stats({ s, countries, visits, onCountry, onAdd, onFind, onPostcard }) {
   const progress = continentProgress(s.visitedCodes, countries.list);
   const latest = {}; // newest visit date per country, to sort the list
   for (const v of visits) if (v.exitedAirport && !(latest[v.countryCode] >= v.dateFrom)) latest[v.countryCode] = v.dateFrom;
@@ -30,6 +30,7 @@ export default function Stats({ s, countries, visits, onCountry, onAdd, onFind }
         <div className="tile"><span className="tile-value">{s.cities}</span><span className="tile-label">{s.cities === 1 ? 'city' : 'cities'}</span></div>
         <div className="tile"><span className="tile-value">{s.worldPercent.toFixed(s.worldPercent < 10 ? 1 : 0)}%</span><span className="tile-label">of the world</span></div>
       </div>
+      <button className="secondary postcard-button" onClick={onPostcard}>Share as a postcard</button>
 
       <h2 className="list-title">Continents</h2>
       <div className="rings">

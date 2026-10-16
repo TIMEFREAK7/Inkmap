@@ -4,4 +4,6 @@
     <string name="title_activity_main">Inkmap</string>
     <string name="package_name">com.timefreak7.inkmap</string>
     <string name="custom_url_scheme">com.timefreak7.inkmap</string>
+    <string name="widget_label">Inkmap counts</string>
+    <string name="widget_description">Continents, countries and cities you\'ve been to</string>
 </resources>

@@ -61,6 +61,24 @@ function placeSun(map, el, date) {
   el.style.transform = `translate(${x}px, ${y}px)`;
 }
 
+// The whole globe facing `center`, cropped square from the map's own canvas, for the postcard.
+// The person's view is put back afterwards. Captured inside the render event: the canvas is cleared after each frame.
+async function snapshot(map, center) {
+  const before = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+  const { width, height } = map.getContainer().getBoundingClientRect();
+  const radius = Math.min(width, height) * 0.42; // CSS px, leaving room for the glow at the rim
+  map.jumpTo({ center, zoom: Math.log2((radius * 2 * Math.PI * Math.cos((center[1] * Math.PI) / 180)) / 512), bearing: 0, pitch: 0 });
+  await Promise.race([map.once('idle'), new Promise(ok => setTimeout(ok, 3000))]);
+  const gl = map.getCanvas(), ratio = gl.width / width, side = Math.round(radius * 2.2 * ratio);
+  const out = Object.assign(document.createElement('canvas'), { width: side, height: side });
+  await new Promise(ok => {
+    map.once('render', () => { out.getContext('2d').drawImage(gl, (gl.width - side) / 2, (gl.height - side) / 2, side, side, 0, 0, side, side); ok(); });
+    map.triggerRepaint();
+  });
+  map.jumpTo(before);
+  return out;
+}
+
 // Theme colours for the globe (sky, sea, lines); re-applied when the app colour changes.
 const sky = () => ({
   'sky-color': 'rgba(0, 0, 0, 0)', 'horizon-color': 'rgba(0, 0, 0, 0)', 'fog-color': cssVar('--map-ocean'),
@@ -108,7 +126,7 @@ function style(geo, visited, colour, nightCanvas) {
 }
 
 // focus: { lon, lat } of a place just logged; the camera flies there and the new fill lands with it.
-export default function Globe({ geo, visited, colour, focus, paused, onCountry, start, onLeave, theme }) {
+export default function Globe({ geo, visited, colour, focus, paused, onCountry, start, onLeave, theme, snapRef }) {
   const el = useRef(null);
   const sunEl = useRef(null);
   const mapRef = useRef(null);
@@ -159,6 +177,10 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
     mapRef.current = map;
     touchRef.current = touch;
     spinRef.current = { startSpin, stopSpin };
+    if (snapRef) snapRef.current = async center => {
+      stopSpin();
+      try { return await snapshot(map, center); } finally { startSpin(); } // startSpin does nothing while paused
+    };
     // A tap (not a drag) on a country opens it.
     map.on('click', 'fill', e => onCountryRef.current?.(e.features[0].properties.iso));
     map.on('mousedown', touch);

@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.DocumentsContract;
+import android.util.Base64;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -69,7 +70,7 @@ public class BackupFolderPlugin extends Plugin {
                 doc = DocumentsContract.createDocument(resolver(), docUri(dir), "application/octet-stream", name);
             }
             try (OutputStream out = resolver().openOutputStream(doc, "wt")) {
-                out.write(call.getString("data", "").getBytes(StandardCharsets.UTF_8));
+                out.write(bytes(call));
             }
             call.resolve();
         } catch (Exception e) {
@@ -87,7 +88,8 @@ public class BackupFolderPlugin extends Plugin {
                 byte[] buf = new byte[65536];
                 for (int n; (n = in.read(buf)) > 0; ) bytes.write(buf, 0, n);
                 JSObject r = new JSObject();
-                r.put("data", bytes.toString("UTF-8"));
+                // base64: binary files (photos); otherwise text (the backup)
+                r.put("data", call.getBoolean("base64", false) ? Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP) : bytes.toString("UTF-8"));
                 call.resolve(r);
             }
         } catch (Exception e) {
@@ -127,6 +129,12 @@ public class BackupFolderPlugin extends Plugin {
         } catch (Exception e) {
             call.reject(e.getMessage(), e);
         }
+    }
+
+    // Text, or binary sent as base64 (photos), so both go through the same calls.
+    static byte[] bytes(PluginCall call) {
+        String data = call.getString("data", "");
+        return call.getBoolean("base64", false) ? Base64.decode(data, Base64.DEFAULT) : data.getBytes(StandardCharsets.UTF_8);
     }
 
     private Uri folder() {

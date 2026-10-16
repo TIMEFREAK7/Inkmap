@@ -11,8 +11,11 @@ import EditVisit from './EditVisit.jsx';
 import Family from './Family.jsx';
 import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
+import Postcard from './Postcard.jsx';
 import { GlobeIcon, StatsIcon, FamilyIcon, StampIcon } from './icons.jsx';
-import { applyTheme, savedTheme } from './theme.js';
+import { applyTheme, savedTheme, cssVar } from './theme.js';
+import { Capacitor } from '@capacitor/core';
+import { Widget } from './native.js';
 import { closeTopDialog } from './sheet.jsx';
 import Inbox from './Inbox.jsx';
 import BoardingScan from './BoardingScan.jsx';
@@ -22,6 +25,7 @@ import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
 import { db } from './db.js';
 import { makeVisit, stats } from './visits.js';
+import { prunePhotos } from './visitPhotos.js';
 
 const UNDO_MS = 5000;
 
@@ -44,6 +48,8 @@ export default function App() {
   const [inbox, setInbox] = useState(false);
   const [theme, setTheme] = useState(savedTheme);
   const [boarding, setBoarding] = useState(false); // boarding pass scanner open
+  const [postcard, setPostcard] = useState(false);
+  const snapRef = useRef(null); // Globe fills it: a picture of the whole globe, for the postcard
   const [suggestions, setSuggestions] = useState([]); // pending, newest trip first
   const [scan, setScan] = useState(null); // photo scan: { running, done, total } then { photos, videos, located, found } or { error }
   const [start, setStart] = useState(undefined); // where the globe faced last time; undefined while loading
@@ -63,10 +69,15 @@ export default function App() {
     reloadFamily();
     reloadSuggestions();
     db.settings.get('lastCenter').then(r => setStart(r?.value ?? null));
+    prunePhotos().catch(() => {});
   }, []);
   const saveCenter = c => db.settings.put({ key: 'lastCenter', value: c });
 
   const s = useMemo(() => stats(visits, countries?.list.length), [visits, countries]);
+  // The home-screen widget (Android) shows the same counts, in the app's colour.
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() && countries) Widget.update({ continents: s.continents, countries: s.countries, cities: s.cities, colour: cssVar('--primary') }).catch(() => {});
+  }, [s.continents, s.countries, s.cities, theme, countries]);
   // Recent places for the empty search: newest first, each place once.
   const recent = useMemo(() => {
     const seen = new Set();
@@ -225,7 +236,8 @@ export default function App() {
   useEffect(() => {
     window.inkmapBack = () => {
       if (closeTopDialog()) return true;
-      if (boarding) setBoarding(false);
+      if (postcard) setPostcard(false);
+      else if (boarding) setBoarding(false);
       else if (editing) setEditing(null);
       else if (country) setCountry(null);
       else if (adding) setAdding(false);
@@ -263,7 +275,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <main>
         {countries && start !== undefined && <Globe geo={countries.geo} visited={s.visitedCodes} colour={profile.colour} focus={focus}
-          start={start} onLeave={saveCenter} theme={theme} paused={tab !== 'globe' || !!country || adding || settings || inbox} onCountry={setCountry} />}
+          start={start} onLeave={saveCenter} theme={theme} snapRef={snapRef} paused={tab !== 'globe' || !!country || adding || settings || inbox} onCountry={setCountry} />}
         <button className="avatar" style={{ background: profile.colour }} aria-label="Settings and backup" onClick={() => setSettings(true)}>
           {profile.name[0]?.toUpperCase()}
         </button>
@@ -275,7 +287,7 @@ export default function App() {
         </header>
         {showFps && <FpsMeter />}
         {error && <p className="error" role="alert">Something went wrong loading the map data: {String(error)}</p>}
-        {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} onAdd={() => setAdding(true)} onFind={() => setInbox(true)} />}
+        {tab === 'stats' && countries && <Stats s={s} countries={countries} visits={visits} onCountry={setCountry} onAdd={() => setAdding(true)} onFind={() => setInbox(true)} onPostcard={() => setPostcard(true)} />}
         {tab === 'passport' && countries && <Passport profile={profile} visits={visits} family={family} countries={countries} onAdd={() => setAdding(true)} />}
         {tab === 'family' && countries && <Family profile={profile} visits={visits} family={family} countries={countries} onChanged={reloadFamily} />}
 
@@ -301,6 +313,7 @@ export default function App() {
             onFind={() => { setAdding(false); setInbox(true); }} />}
           {country && <CountryView key={country} code={country} countries={countries} visits={visits} colour={profile.colour}
             onEdit={setEditing} onClose={() => setCountry(null)} />}
+          {postcard && <Postcard snapRef={snapRef} profile={profile} s={s} visits={visits} onClose={() => setPostcard(false)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
           {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport} onCalendar={calendarImport}
             onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onBoarding={() => setBoarding(true)} onClose={() => setInbox(false)} />}
@@ -320,7 +333,7 @@ export default function App() {
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
         <AnimatePresence>
           {undo && (
-            <motion.div className={adding || country || editing || settings || inbox || boarding ? 'undo low' : 'undo'} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+            <motion.div className={adding || country || editing || settings || inbox || boarding || postcard ? 'undo low' : 'undo'} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
               <span>{undo.text}</span>
               <button className="text-button" onClick={undoLast}>Undo</button>
             </motion.div>

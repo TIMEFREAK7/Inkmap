@@ -10,6 +10,10 @@ export class NewerBackupError extends Error {
 export async function buildBackup(db) {
   const data = { format: FORMAT, schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString() };
   for (const t of TABLES) data[t] = await db.table(t).toArray();
+  // Photos: only which visit each belongs to (keys only, no image data); the images are separate files.
+  const byVisit = db.photos.orderBy('visitId');
+  const [visitIds, ids] = [await byVisit.keys(), await byVisit.primaryKeys()];
+  data.photos = ids.map((id, i) => ({ id, visitId: visitIds[i] }));
   return data;
 }
 
@@ -20,6 +24,7 @@ export function parseBackup(text) {
   if (data?.format !== FORMAT) throw new Error('This file is not an Inkmap backup.');
   if (!(data.schemaVersion <= SCHEMA_VERSION)) throw new NewerBackupError();
   for (const t of TABLES) if (!Array.isArray(data[t])) throw new Error('This backup is incomplete and cannot be restored.');
+  data.photos = Array.isArray(data.photos) ? data.photos.filter(p => typeof p?.id === 'string' && typeof p.visitId === 'string') : []; // older backups have none
   return data;
 }
 

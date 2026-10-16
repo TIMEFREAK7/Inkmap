@@ -41,4 +41,13 @@ describe('full backup', () => {
     expect(() => parseBackup('{"format":"something-else"}')).toThrow('not an Inkmap backup');
     expect(() => parseBackup(JSON.stringify({ format: 'inkmap-backup', schemaVersion: 1 }))).toThrow('incomplete');
   });
+
+  it('lists photos by visit without their image data; older backups have none', async () => {
+    await db.photos.add({ id: 'p1', visitId: 'v1', data: 'data:image/jpeg;base64,AAAA', pending: 1 });
+    const data = await buildBackup(db);
+    expect(data.photos).toEqual([{ id: 'p1', visitId: 'v1' }]);
+    expect(JSON.stringify(data)).not.toContain('base64');
+    const { photos, ...old } = data;
+    expect(parseBackup(JSON.stringify(old)).photos).toEqual([]);
+  });
 });

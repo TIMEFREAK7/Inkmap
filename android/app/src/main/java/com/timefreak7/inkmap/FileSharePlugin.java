@@ -9,9 +9,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.nio.charset.StandardCharsets;
 
-// Hands a text file (the family share file) to Android's share sheet: WhatsApp, email, Drive, Bluetooth...
+// Hands a file (the family share file, a postcard picture) to Android's share sheet: WhatsApp, email, Drive, Bluetooth...
 @CapacitorPlugin(name = "FileShare")
 public class FileSharePlugin extends Plugin {
     @PluginMethod
@@ -22,11 +21,12 @@ public class FileSharePlugin extends Plugin {
             // Only the plain file name: the name ends up in a path.
             File file = new File(dir, new File(call.getString("name", "inkmap.inkshare")).getName());
             try (FileOutputStream out = new FileOutputStream(file)) {
-                out.write(call.getString("data", "").getBytes(StandardCharsets.UTF_8));
+                out.write(BackupFolderPlugin.bytes(call));
             }
             Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
             Intent send = new Intent(Intent.ACTION_SEND);
-            send.setType("application/octet-stream"); // a document, so chat apps send it as a file rather than text
+            // octet-stream for the family file, so chat apps send it as a file rather than text; image/jpeg for a picture
+            send.setType(call.getString("mime", "application/octet-stream"));
             send.putExtra(Intent.EXTRA_STREAM, uri);
             send.putExtra(Intent.EXTRA_SUBJECT, call.getString("title", "Inkmap"));
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);

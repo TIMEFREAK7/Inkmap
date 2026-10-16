@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
 import { BackupFolder } from './native.js';
-import { hasBackupFolder, backupNow, scheduleBackup } from './backup.js';
+import { hasBackupFolder, backupNow, scheduleBackup, markAllPhotosPending } from './backup.js';
 import { COLOURS, COLOUR_NAMES } from './Onboarding.jsx';
 import { THEMES } from './theme.js';
 import { loadBoundarySources } from './data.js';
@@ -27,6 +27,7 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
   async function changeFolder() {
     try {
       setFolder(await BackupFolder.pick());
+      await markAllPhotosPending();
       await backupNow();
     } catch { /* picker closed without a folder: keep the old one */ }
   }

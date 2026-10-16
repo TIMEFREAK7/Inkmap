@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { db } from './db.js';
 import { newFriendId, parseFriendId } from './friendId.js';
 import { BackupFolder } from './native.js';
-import { hasBackupFolder, backupNow, readFolderBackup } from './backup.js';
+import { hasBackupFolder, backupNow, readFolderBackup, restorePhotos } from './backup.js';
 import { restoreBackup, summarise } from './backupFile.js';
 
 export const COLOURS = ['#f6ad3b', '#ff7a6b', '#f472b6', '#a78bfa', '#60a5fa', '#2dd4bf', '#4ade80', '#e2e8f0'];
@@ -54,6 +54,7 @@ export default function Onboarding({ onDone }) {
 
   async function restore() {
     await restoreBackup(db, found);
+    await restorePhotos(found.photos);
     onDone();
   }
 

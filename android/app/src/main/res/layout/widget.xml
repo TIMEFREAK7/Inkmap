@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="0.2"
+        android:text="INKMAP"
+        android:textColor="#5EE0C8"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <LinearLayout style="@style/WidgetColumn">
+            <TextView android:id="@+id/continents" style="@style/WidgetValue" />
+            <TextView android:id="@+id/continents_label" style="@style/WidgetLabel" android:text="continents" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetColumn">
+            <TextView android:id="@+id/countries" style="@style/WidgetValue" />
+            <TextView android:id="@+id/countries_label" style="@style/WidgetLabel" android:text="countries" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetColumn">
+            <TextView android:id="@+id/cities" style="@style/WidgetValue" />
+            <TextView android:id="@+id/cities_label" style="@style/WidgetLabel" android:text="cities" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

@@ -9,3 +9,6 @@ db.version(1).stores({
   family: 'friendId',
   settings: 'key',
 });
+// Up to 5 photos per visit, shrunk on the phone. Kept out of the backup JSON (it's rewritten after every change);
+// each photo is its own file in the backup folder. pending: 1 until that file is written (indexed, then removed).
+db.version(2).stores({ photos: 'id, visitId, pending' });

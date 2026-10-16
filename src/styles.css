@@ -465,3 +465,21 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 
 /* Read by screen readers, not shown (live announcements). */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Photos of a visit (Edit sheet) */
+.photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.photo { aspect-ratio: 1; padding: 0; border: none; border-radius: var(--r-m); overflow: hidden; background: var(--surface-highest); cursor: pointer; }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo.add { border: 2px dashed var(--outline); background: none; color: var(--primary); font-size: 36px; }
+.photo-view {
+  position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; gap: 12px; background: #000;
+  padding: calc(var(--top) + 12px) calc(var(--right) + 16px) calc(var(--bottom) + 16px) calc(var(--left) + 16px);
+}
+.photo-view img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+.photo-view-buttons { display: flex; gap: 12px; }
+.photo-view-buttons button { flex: 1; margin: 0; }
+
+/* Postcard preview */
+.postcard { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px 0; }
+.postcard img { max-width: 100%; max-height: 100%; border-radius: var(--r-l); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+.postcard-button { width: 100%; margin-top: 12px; }
