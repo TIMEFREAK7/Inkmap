@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useTransform } from 'motion/react';
-import { useSheetDrag } from './sheet.jsx';
+import { useSheetDrag, useBackHandler } from './sheet.jsx';
+import { cssVar } from './theme.js';
 import { describeDates } from './visits.js';
 import { flagUrl } from './flags.js';
 import { scansLibrary } from './photos.js';
@@ -16,6 +17,7 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
   const fileRef = useRef(null);
   const timelineRef = useRef(null);
   const [top, next] = suggestions;
+  const [round, setRound] = useState(0); // bumped to bring a swiped-away card back when the airport question is cancelled
 
   function start() {
     if (scansLibrary) onScan(null);
@@ -27,7 +29,7 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="sheet-head">
-        <h1 className="title small">{top ? 'Places to check' : "Find places you've been"}</h1>
+        <h1 className="title small">{top ? 'Places to check' : "Find places I've been"}</h1>
         <button className="text-button" onClick={onClose}>Done</button>
       </div>
 
@@ -40,13 +42,13 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
       )}
       {scan?.error && <p className="warn" role="alert">{scan.error}</p>}
       {scan?.calendarEvents != null && (
-        <p className="hint scan-summary">Read {plural(scan.calendarEvents, 'calendar event', 'calendar events')} with a place{' · '}{plural(scan.found, 'new place', 'new places')}</p>
+        <p className="hint scan-summary" role="status">Read {plural(scan.calendarEvents, 'calendar event', 'calendar events')} with a place{' · '}{plural(scan.found, 'new place', 'new places')}</p>
       )}
       {scan?.timelineVisits != null && (
-        <p className="hint scan-summary">Read {plural(scan.timelineVisits, 'Timeline visit', 'Timeline visits')}{' · '}{plural(scan.found, 'new place', 'new places')}</p>
+        <p className="hint scan-summary" role="status">Read {plural(scan.timelineVisits, 'Timeline visit', 'Timeline visits')}{' · '}{plural(scan.found, 'new place', 'new places')}</p>
       )}
       {scan?.photos != null && (
-        <p className="hint scan-summary">
+        <p className="hint scan-summary" role="status">
           Read {plural(scan.photos, 'photo', 'photos')}{scan.videos ? ` and ${plural(scan.videos, 'video', 'videos')}` : ''}
           {' · '}{scan.located} with a location{' · '}{plural(scan.found, 'new place', 'new places')}
         </p>
@@ -57,7 +59,7 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
           <p className="hint">{plural(suggestions.length, 'place', 'places')} to check. Were you there?</p>
           <div className="deck">
             {next && <Card key={next.id} s={next} where={where(next)} behind />}
-            <Card key={top.id} s={top} where={where(top)} onConfirm={() => onConfirm(top)} onReject={() => onReject(top)} />
+            <Card key={`${top.id}-${round}`} s={top} where={where(top)} onConfirm={() => onConfirm(top)} onReject={() => onReject(top)} />
           </div>
           <div className="deck-buttons">
             <button className="secondary" onClick={() => onReject(top)}>Not me</button>
@@ -97,14 +99,8 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
         </div>
       )}
       {asking && (
-        <div className="scrim">
-          <div className="dialog" role="alertdialog" aria-modal="true" aria-label="Did you leave the airport?">
-            <h2 className="dialog-title">Did you leave the airport in {asking.name}?</h2>
-            <p className="hint">Only places where you went outside the airport count toward your countries and cities.</p>
-            <button className="primary" onClick={() => { confirm(asking, true); setAsking(null); }}>Yes, I went into {asking.name}</button>
-            <button className="secondary" onClick={() => { confirm(asking, false); setAsking(null); }}>No, I only changed planes</button>
-          </div>
-        </div>
+        <AirportQuestion s={asking} onAnswer={exited => { confirm(asking, exited); setAsking(null); }}
+          onCancel={() => { setAsking(null); setRound(r => r + 1); }} />
       )}
       <input ref={timelineRef} type="file" accept=".json,application/json" multiple hidden
         onChange={e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) onTimeline(files); }} />
@@ -114,11 +110,26 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
   );
 }
 
+function AirportQuestion({ s, onAnswer, onCancel }) {
+  useBackHandler(onCancel);
+  return (
+    <div className="scrim">
+      <div className="dialog" role="alertdialog" aria-modal="true" aria-label="Did you leave the airport?">
+        <h2 className="dialog-title">Did you leave the airport in {s.name}?</h2>
+        <p className="hint">Only places where you went outside the airport count toward your countries and cities.</p>
+        <button className="primary" onClick={() => onAnswer(true)} autoFocus>Yes, I went into {s.name}</button>
+        <button className="secondary" onClick={() => onAnswer(false)}>No, I only changed planes</button>
+        <button className="text-button" onClick={onCancel}>Go back</button>
+      </div>
+    </div>
+  );
+}
+
 // The top card follows the finger, tilting and tinting green (yes) or red (no); past the threshold it flies off.
 function Card({ s, where, behind, onConfirm, onReject }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
-  const tint = useTransform(x, [-150, 0, 150], ['#4a2236', '#1d2547', '#1d4a3c']);
+  const tint = useTransform(x, [-150, 0, 150], ['#4a2236', cssVar('--surface-high'), '#1d4a3c']); // red = no, green = yes
 
   async function release(_, info) {
     const dir = info.offset.x > 110 || info.velocity.x > 600 ? 1 : info.offset.x < -110 || info.velocity.x < -600 ? -1 : 0;

@@ -35,6 +35,8 @@ export function parseShare(text, countryCodes) {
   if (typeof d.name !== 'string' || !d.name.trim() || d.name.length > 40) throw new Error(DAMAGED);
   if (typeof d.colour !== 'string' || !/^#[0-9a-f]{6}$/i.test(d.colour)) throw new Error(DAMAGED);
   if (!isDate(d.exportedAt?.slice(0, 10)) || isNaN(Date.parse(d.exportedAt))) throw new Error(DAMAGED);
+  // A date in the future would block every real update from this person ('older'): reject it (a day of clock slack).
+  if (Date.parse(d.exportedAt) > Date.now() + 86400000) throw new Error(DAMAGED);
   if (!Array.isArray(d.visits) || d.visits.length > 100000) throw new Error(DAMAGED);
   const visits = d.visits.map(v => {
     const ok = v && Number.isInteger(v.geonameId) && typeof v.name === 'string' && v.name.length <= 200

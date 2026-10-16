@@ -56,7 +56,7 @@ export async function importTimeline(places, countries, files) {
   let visits = 0;
   for (const f of files) {
     const r = parseTimeline(await f.text());
-    points.push(...r.points);
+    for (const p of r.points) points.push(p); // not push(...): years of history overflow the call stack
     visits += r.visits;
   }
   return { timelineVisits: visits, found: await addSuggestions(places, countries, points, 'timeline') };
@@ -83,7 +83,7 @@ export async function importCalendar(places, countries) {
 
 // A scanned boarding pass: one suggestion per flight, at the city its destination airport serves (not home).
 export async function importBoardingPass(places, countries, text) {
-  const legs = parseBoardingPass(text, today());
+  const legs = parseBoardingPass(text, today()).filter(l => l.date <= today()); // a pass for a flight not yet taken
   const cities = await places.airportCities(legs.map(l => l.to));
   const home = (await db.settings.get('home'))?.value;
   const trips = legs.filter(l => cities[l.to] && !(home && km(cities[l.to].lat, cities[l.to].lon, home.lat, home.lon) < HOME_KM))

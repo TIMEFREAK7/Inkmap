@@ -94,7 +94,7 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
               {/* Tap a visit to zoom to its district: city-sized districts are a few pixels at country zoom. */}
               <button className="result" onClick={() => {
                 const d = districtRef.current[v.id];
-                mapRef.current?.fitBounds(d ? bboxOf(d) : [[v.lon - 0.3, v.lat - 0.3], [v.lon + 0.3, v.lat + 0.3]], { padding: 40, duration: 900 });
+                mapRef.current?.fitBounds(d ? bboxOf(d) : [[v.lon - 0.3, v.lat - 0.3], [v.lon + 0.3, v.lat + 0.3]], { padding: 40, duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 900 });
               }}>
                 <span className="result-name">{v.name}</span>
                 {areas[v.id] && <span className="result-where">{areas[v.id]}</span>}

@@ -9,6 +9,9 @@ const loadAirports = async url => {
   airportGrid ||= gridOf(airportList);
 };
 self.onmessage = async ({ data }) => {
+  try { await handle(data); } catch (e) { self.postMessage({ id: data.id, error: String(e?.message || e) }); } // never leave a request hanging
+};
+async function handle(data) {
   if (data.type === 'load') {
     const t0 = performance.now();
     index = buildIndex(parsePlaces(await fetch(data.url).then(r => r.text())));
@@ -29,4 +32,4 @@ self.onmessage = async ({ data }) => {
     }
     self.postMessage({ id: data.id, cities });
   }
-};
+}

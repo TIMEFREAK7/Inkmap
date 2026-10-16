@@ -6,6 +6,8 @@ import { hasBackupFolder, backupNow, readFolderBackup } from './backup.js';
 import { restoreBackup, summarise } from './backupFile.js';
 
 export const COLOURS = ['#f6ad3b', '#ff7a6b', '#f472b6', '#a78bfa', '#60a5fa', '#2dd4bf', '#4ade80', '#e2e8f0'];
+// Spoken names, so a screen reader doesn't read out hex codes.
+export const COLOUR_NAMES = { '#f6ad3b': 'Orange', '#ff7a6b': 'Coral', '#f472b6': 'Pink', '#a78bfa': 'Purple', '#60a5fa': 'Blue', '#2dd4bf': 'Teal', '#4ade80': 'Green', '#e2e8f0': 'White' };
 
 // First launch: start fresh, come back with an old friend ID, or restore a backup. Ends with a backup folder.
 export default function Onboarding({ onDone }) {
@@ -15,6 +17,7 @@ export default function Onboarding({ onDone }) {
   const [idText, setIdText] = useState('');
   const [found, setFound] = useState(null);
   const [message, setMessage] = useState('');
+  const [clash, setClash] = useState(false); // the backup folder picked for a new start already holds a backup
 
   const typedId = parseFriendId(idText);
   const ready = name.trim() && (step === 'fresh' || typedId);
@@ -28,7 +31,9 @@ export default function Onboarding({ onDone }) {
   async function chooseFolder() {
     try {
       await BackupFolder.pick();
-      await backupNow();
+      const r = await backupNow();
+      if (r.conflict) { setFound(r.conflict); setClash(true); setStep('restore'); return; } // a backup is already there: offer it
+      if (!r.ok) { setMessage(r.error); return; }
       onDone();
     } catch (e) {
       setMessage(e.message === 'No folder chosen' ? '' : e.message);
@@ -80,7 +85,7 @@ export default function Onboarding({ onDone }) {
           </>
         ) : (
           <>
-            <p className="lead">Found {s.name ? `${s.name}'s` : 'a'} backup:</p>
+            <p className="lead">{clash ? 'That folder already has a backup. Inkmap will not overwrite it.' : ''} Found {s.name ? `${s.name}'s` : 'a'} backup:</p>
             <ul className="facts">
               <li>{s.places} {s.places === 1 ? 'place' : 'places'}</li>
               <li>Saved {new Date(s.exportedAt).toLocaleString()}</li>
@@ -89,7 +94,9 @@ export default function Onboarding({ onDone }) {
             <p className="lead">Restoring replaces everything in Inkmap on this phone with this backup.</p>
             <div className="actions">
               <button className="primary" onClick={restore}>Restore this backup</button>
-              <button className="secondary" onClick={() => setFound(null)}>Pick a different folder</button>
+              {clash
+                ? <button className="secondary" onClick={() => { setFound(null); setClash(false); setStep('folder'); }}>Start fresh, choose another folder</button>
+                : <button className="secondary" onClick={() => setFound(null)}>Pick a different folder</button>}
             </div>
           </>
         )}
@@ -122,16 +129,17 @@ export default function Onboarding({ onDone }) {
       {step === 'haveId' && (
         <label className="field">
           Your friend ID
-          <input value={idText} onChange={e => setIdText(e.target.value)} placeholder="IM-XXXX-XXXX" autoCapitalize="characters" spellCheck={false} />
-          {idText && !typedId && <span className="warn">That doesn't look like an ID yet. It has the form IM-XXXX-XXXX.</span>}
+          <input value={idText} onChange={e => setIdText(e.target.value)} placeholder="IM-XXXX-XXXX" autoCapitalize="characters" spellCheck={false}
+            autoComplete="off" enterKeyHint="done" aria-invalid={!!idText && !typedId} aria-describedby="id-help" />
+          {idText && !typedId && <span className="warn" id="id-help" role="alert">That doesn't look like an ID yet. It has the form IM-XXXX-XXXX.</span>}
           {typedId && <span className="hint-inline">Will use {typedId}</span>}
         </label>
       )}
-      <fieldset className="field colours">
+      <fieldset className="field colours" role="radiogroup">
         <legend>Your colour on the map</legend>
         {COLOURS.map(c => (
           <button key={c} className={c === colour ? 'swatch picked' : 'swatch'} style={{ background: c }}
-            aria-label={`Colour ${c}`} aria-pressed={c === colour} onClick={() => setColour(c)} />
+            role="radio" aria-label={COLOUR_NAMES[c]} aria-checked={c === colour} onClick={() => setColour(c)} />
         ))}
       </fieldset>
       <div className="actions">
@@ -144,7 +152,7 @@ export default function Onboarding({ onDone }) {
 function Screen({ children, onBack }) {
   return (
     <div className="onboarding">
-      {onBack && <button className="text-button back" onClick={onBack}>‹ Back</button>}
+      {onBack && <button className="text-button back" onClick={onBack}><span aria-hidden="true">‹ </span>Back</button>}
       {children}
     </div>
   );

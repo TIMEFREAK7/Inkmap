@@ -12,7 +12,8 @@ const latLon = v => {
   const m = typeof v === 'string' && v.match(NUMBERS);
   return m && { lat: +m[1], lon: +m[2] };
 };
-// The export writes local times with their offset ("2024-05-01T10:00:00.000+05:30"), so the date part is the local day.
+// The phone exports write local times with their offset ("2024-05-01T10:00:00.000+05:30"), so the date part is the local day.
+// shortcut: older Takeout files are in UTC ("...Z"), so a stay just after midnight local time can land on the day before.
 const day = t => (typeof t === 'string' && /^\d{4}-\d{2}-\d{2}/.test(t) ? t.slice(0, 10) : null);
 
 function visits(json) {

@@ -13,7 +13,7 @@ export default function Stats({ s, countries, visits, onCountry, onAdd, onFind }
         <h1 className="title small">Places I've been</h1>
         <Empty title="Nothing here yet" text="Add the places you've been and this page fills in: countries, continents and a timeline by year.">
           <button className="primary" onClick={onAdd}>Add a place</button>
-          <button className="secondary" onClick={onFind}>Find them in my photos</button>
+          <button className="secondary" onClick={onFind}>Find places I've been</button>
         </Empty>
       </div>
     );

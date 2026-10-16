@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useBackHandler } from './sheet.jsx';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import { cssVar } from './theme.js';
 import { AnimatePresence, motion } from 'motion/react';
@@ -17,6 +18,7 @@ export default function Family({ profile, visits, family, countries, onChanged }
   const [pending, setPending] = useState(null); // a new person's share, waiting for Add / Cancel
   const [removing, setRemoving] = useState(null);
   const [message, setMessage] = useState('');
+  const fileRef = useRef(null);
 
   const people = useMemo(() => [
     { id: profile.friendId, name: `${profile.name} (you)`, colour: profile.colour, codes: countedCodes(visits) },
@@ -40,13 +42,14 @@ export default function Family({ profile, visits, family, countries, onChanged }
 
   async function importFile(file) {
     setMessage('');
+    if (file.size > 20 * 1024 * 1024) return setMessage('This file is too big to be an Inkmap family file.'); // real ones are well under 1 MB
     try {
       const shareData = parseShare(await file.text(), new Set(countries.list.map(c => c.code)));
       const decision = decideImport(shareData, profile.friendId, await db.family.get(shareData.friendId));
       if (decision === 'own') setMessage("That's your own file. Send it to your family instead.");
       else if (decision === 'older') setMessage(`You already have a newer copy of ${shareData.name}'s map.`);
       else if (decision === 'ask-add') setPending(shareData);
-      else await save(shareData, `Updated ${shareData.name}'s map.`);
+      else setPending({ ...shareData, update: true }); // anyone can type a friend ID: confirm before replacing a map
     } catch (e) {
       setMessage(e.message);
     }
@@ -83,10 +86,8 @@ export default function Family({ profile, visits, family, countries, onChanged }
       {message && <p className="notice" role="status">{message}</p>}
       <div className="family-actions">
         <button className="primary" onClick={share}>Share my map</button>
-        <label className="secondary file-button">
-          Add from a family file
-          <input type="file" hidden onChange={e => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); }} />
-        </label>
+        <button className="secondary" onClick={() => fileRef.current.click()}>Add from a family file</button>
+        <input ref={fileRef} type="file" hidden onChange={e => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); }} />
       </div>
 
       {family.length === 0 ? (
@@ -110,9 +111,10 @@ export default function Family({ profile, visits, family, countries, onChanged }
       )}
 
       {pending && (
-        <Dialog title={`Add ${pending.name} (${pending.friendId}) to your family?`}
+        <Dialog title={pending.update ? `Update ${pending.name}'s map (${pending.friendId})?` : `Add ${pending.name} (${pending.friendId}) to your family?`}
           text={`${plural(countedCodes(pending.visits).length, 'country', 'countries')} · Updated ${updated(pending.exportedAt)}`}
-          confirm="Add" onConfirm={() => save(pending, `Added ${pending.name}.`)} onCancel={() => setPending(null)} />
+          confirm={pending.update ? 'Update' : 'Add'}
+          onConfirm={() => save(pending, pending.update ? `Updated ${pending.name}'s map.` : `Added ${pending.name}.`)} onCancel={() => setPending(null)} />
       )}
       {removing && (
         <Dialog title={`Remove ${removing.name}?`}
@@ -124,12 +126,13 @@ export default function Family({ profile, visits, family, countries, onChanged }
 }
 
 function Dialog({ title, text, confirm, danger, onConfirm, onCancel }) {
+  useBackHandler(onCancel); // the back gesture cancels the question, not the whole screen
   return (
     <div className="scrim" onClick={onCancel}>
       <div className="dialog" role="alertdialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
         <h2 className="dialog-title">{title}</h2>
         <p className="hint">{text}</p>
-        <button className={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirm}</button>
+        <button className={danger ? 'danger' : 'primary'} onClick={onConfirm} autoFocus>{confirm}</button>
         <button className="secondary" onClick={onCancel}>Cancel</button>
       </div>
     </div>

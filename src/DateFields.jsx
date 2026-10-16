@@ -15,7 +15,7 @@ export default function DateFields({ from, to, onChange }) {
       <div className="field-row">
         <label className="field">
           <span>Until <span className="optional">(optional)</span></span>
-          <input type="date" value={to} min={from} onChange={e => onChange(from, e.target.value)} />
+          <input type="date" value={to} min={from} onChange={e => onChange(from, e.target.value && e.target.value < from ? from : e.target.value)} />
         </label>
         <label className="field days">
           Days

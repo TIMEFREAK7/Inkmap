@@ -166,7 +166,7 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
     map.on('wheel', touch);
     map.on('load', () => {
       el.current?.classList.add('ready'); // fade in from black
-      map.easeTo({ center: start ?? [78, 20], duration: 1600, easing: t => 1 - (1 - t) ** 3 });
+      map.easeTo({ center: start ?? [78, 20], duration: reduced ? 0 : 1600, easing: t => 1 - (1 - t) ** 3 });
       startSpin();
     });
     // Remember where the globe faced, for the next launch.
@@ -205,7 +205,8 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
     const map = mapRef.current;
     if (!focus || !map) return;
     touchRef.current(); // rest for a few seconds on the new place before spinning again
-    map.flyTo({ center: [focus.lon, focus.lat], zoom: 2.4, duration: 1200 });
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    map.flyTo({ center: [focus.lon, focus.lat], zoom: 2.4, duration: still ? 0 : 1200 });
   }, [focus]);
 
   useEffect(() => {

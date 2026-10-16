@@ -26,7 +26,7 @@ export default function FpsMeter() {
     return () => cancelAnimationFrame(raf);
   }, []);
   return (
-    <div className="fps" aria-live="polite">
+    <div className="fps">
       {stats ? `${stats.fps} fps of ${stats.hz} Hz · ${stats.dropped} dropped · slowest ${stats.worst} ms` : 'Measuring…'}
     </div>
   );

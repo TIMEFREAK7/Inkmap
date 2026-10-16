@@ -90,3 +90,12 @@ describe('share file contents and validation', () => {
     expect(() => parseShare(JSON.stringify({ format: 'inkmap-backup' }), codes)).toThrow(/full backup/);
   });
 });
+
+describe('share files from the future', () => {
+  it('refuses a file dated far in the future (it would block every real update)', async () => {
+    const { parseShare, buildShare } = await import('../src/share.js');
+    const f = buildShare({ friendId: 'IM-0000-0001', name: 'X', colour: '#123456' }, []);
+    f.exportedAt = '9999-12-31T00:00:00.000Z';
+    expect(() => parseShare(JSON.stringify(f), new Set(['IN']))).toThrow(/damaged/);
+  });
+});

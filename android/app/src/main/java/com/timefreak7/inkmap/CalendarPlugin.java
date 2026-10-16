@@ -56,8 +56,8 @@ public class CalendarPlugin extends Plugin {
                 e.put("to", day(Math.max(start, end), tz));
                 events.put(e);
             }
-        } catch (SecurityException e) {
-            call.reject("No permission to read the calendar.");
+        } catch (Exception e) { // on a background thread: an uncaught exception would close the app
+            call.reject(e instanceof SecurityException ? "No permission to read the calendar." : "Could not read the calendar: " + e.getMessage());
             return;
         }
         JSObject result = new JSObject();

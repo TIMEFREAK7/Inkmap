@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import Globe from './Globe.jsx';
 import FpsMeter from './FpsMeter.jsx';
@@ -13,6 +13,7 @@ import Passport from './Passport.jsx';
 import Celebrate from './Celebrate.jsx';
 import { GlobeIcon, StatsIcon, FamilyIcon, StampIcon } from './icons.jsx';
 import { applyTheme, savedTheme } from './theme.js';
+import { closeTopDialog } from './sheet.jsx';
 import Inbox from './Inbox.jsx';
 import BoardingScan from './BoardingScan.jsx';
 import { findPhotoTrips, importTimeline, importBoardingPass, importCalendar } from './photos.js';
@@ -73,7 +74,13 @@ export default function App() {
       .map(v => ({ id: v.geonameId, name: v.name, cc: v.countryCode, admin1: v.admin1Code, lat: v.lat, lon: v.lon }));
   }, [visits]);
 
+  const saving = useRef(false); // a quick double tap must not save the same visit twice
   async function save(place, date, dateTo, source, exitedAirport = true) {
+    if (saving.current) return null;
+    saving.current = true;
+    try { return await saveOnce(place, date, dateTo, source, exitedAirport); } finally { saving.current = false; }
+  }
+  async function saveOnce(place, date, dateTo, source, exitedAirport) {
     const visit = makeVisit(place, countries.byCode[place.cc], { date, dateTo, source, exitedAirport });
     const counted = visits.filter(v => v.exitedAirport);
     const newCountry = !counted.some(v => v.countryCode === visit.countryCode);
@@ -90,7 +97,11 @@ export default function App() {
   }
 
   // Runs at app level so it keeps going while the person closes the inbox and uses the app.
+  // Imports need the place data (loaded in the background at launch).
+  const notReady = () => !places && (setScan({ error: 'Inkmap is still getting places ready. Try again in a moment.' }), true);
+
   async function scanPhotos(files) {
+    if (notReady()) return;
     setScan({ running: true, done: 0, total: 0 });
     try {
       const result = await findPhotoTrips(places, countries, files, p => setScan({ running: true, ...p }));
@@ -103,6 +114,7 @@ export default function App() {
   }
 
   async function calendarImport() {
+    if (notReady()) return;
     setScan({ running: true, label: 'Reading your calendar', done: 0, total: 0 });
     try {
       setScan(await importCalendar(places, countries));
@@ -114,6 +126,7 @@ export default function App() {
   }
 
   async function timelineImport(files) {
+    if (notReady()) return;
     setScan({ running: true, label: 'Reading your Timeline', done: 0, total: 0 });
     try {
       setScan(await importTimeline(places, countries, files));
@@ -126,6 +139,7 @@ export default function App() {
 
   // A boarding pass returns { found, legs }; the scanner shows what was read.
   async function boardingPassCode(text) {
+    if (!places) throw new Error('Inkmap is still getting places ready. Try again in a moment.');
     const { legs, found } = await importBoardingPass(places, countries, text);
     scheduleBackup();
     reloadSuggestions();
@@ -137,8 +151,10 @@ export default function App() {
   // exited: false for a boarding pass stop where the person only changed planes (kept, but not counted).
   async function confirmSuggestion(sg, exited = true) {
     const place = { id: sg.geonameId, name: sg.name, cc: sg.countryCode, admin1: sg.admin1Code, lat: sg.lat, lon: sg.lon };
-    await db.suggestions.update(sg.id, { status: 'confirmed' });
+    // Only once: a double tap, or a tap during the swipe-away, finds it no longer pending.
+    if (!(await db.suggestions.where('id').equals(sg.id).and(s => s.status === 'pending').modify({ status: 'confirmed' }))) return;
     const visit = await save(place, sg.dateFrom, sg.dateTo, sg.source, exited);
+    if (!visit) return;
     reloadSuggestions();
     setUndo({ text: `Added ${sg.name}`, run: () => Promise.all([db.visits.delete(visit.id), db.suggestions.update(sg.id, { status: 'pending' })]) });
   }
@@ -147,6 +163,7 @@ export default function App() {
   async function setHome(sg) {
     const home = { geonameId: sg.geonameId, name: sg.name, lat: sg.lat, lon: sg.lon };
     const around = suggestions.filter(x => km(x.lat, x.lon, home.lat, home.lon) < HOME_KM);
+    const before = await db.settings.get('home'); // Undo brings back the previous home town, if there was one
     await db.settings.put({ key: 'home', value: home });
     await db.suggestions.bulkUpdate(around.map(x => ({ key: x.id, changes: { status: 'rejected' } })));
     const logged = visits.some(v => v.geonameId === sg.geonameId);
@@ -158,7 +175,7 @@ export default function App() {
     setUndo({
       text: `Home set to ${sg.name}`,
       run: () => Promise.all([
-        db.settings.delete('home'),
+        before ? db.settings.put(before) : db.settings.delete('home'),
         db.suggestions.bulkUpdate(around.map(x => ({ key: x.id, changes: { status: 'pending' } }))),
         visit && db.visits.delete(visit.id),
       ]),
@@ -207,6 +224,7 @@ export default function App() {
   // Android back gesture (MainActivity): close the topmost screen; false means nothing was open, so leave the app.
   useEffect(() => {
     window.inkmapBack = () => {
+      if (closeTopDialog()) return true;
       if (boarding) setBoarding(false);
       else if (editing) setEditing(null);
       else if (country) setCountry(null);
@@ -218,6 +236,11 @@ export default function App() {
       return true;
     };
   });
+  useEffect(() => {
+    const esc = e => { if (e.key === 'Escape') window.inkmapBack?.(); };
+    addEventListener('keydown', esc);
+    return () => removeEventListener('keydown', esc);
+  }, []);
 
   const where = v => [countries.admin1[`${v.countryCode}.${v.admin1Code}`], countries.byCode[v.countryCode]?.name].filter(Boolean).join(', ');
 
@@ -231,7 +254,7 @@ export default function App() {
   if (profile === null) {
     return (
       <MotionConfig reducedMotion="user">
-        <main><Onboarding onDone={() => { loadProfile(); reload(); reloadFamily(); }} /></main>
+        <main><Onboarding onDone={() => { loadProfile(); reload(); reloadFamily(); reloadSuggestions(); }} /></main>
       </MotionConfig>
     );
   }
@@ -265,11 +288,11 @@ export default function App() {
           )}
           {visits.length === 0 && tab === 'globe' && <p className="empty">Tap + to add your first place</p>}
           <nav className="tabs" aria-label="Screens">
-            <button className={tab === 'globe' ? 'tab on' : 'tab'} aria-current={tab === 'globe'} onClick={() => setTab('globe')}><GlobeIcon />Globe</button>
-            <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats'} onClick={() => setTab('stats')}><StatsIcon />Stats</button>
+            <button className={tab === 'globe' ? 'tab on' : 'tab'} aria-current={tab === 'globe' ? 'page' : undefined} onClick={() => setTab('globe')}><GlobeIcon />Globe</button>
+            <button className={tab === 'stats' ? 'tab on' : 'tab'} aria-current={tab === 'stats' ? 'page' : undefined} onClick={() => setTab('stats')}><StatsIcon />Stats</button>
             <button className="fab" aria-label="Add a place" onClick={() => setAdding(true)} disabled={!countries}>+</button>
-            <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family'} onClick={() => setTab('family')}><FamilyIcon />Family</button>
-            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport'} onClick={() => setTab('passport')}><StampIcon />Stamps</button>
+            <button className={tab === 'family' ? 'tab on' : 'tab'} aria-current={tab === 'family' ? 'page' : undefined} onClick={() => setTab('family')}><FamilyIcon />Family</button>
+            <button className={tab === 'passport' ? 'tab on' : 'tab'} aria-current={tab === 'passport' ? 'page' : undefined} onClick={() => setTab('passport')}><StampIcon />Stamps</button>
           </nav>
         </div>
 
@@ -289,11 +312,15 @@ export default function App() {
         </AnimatePresence>
 
         {countries && <Celebrate event={celebrate} countries={countries} onDone={() => setCelebrate(null)} />}
+        {/* Always mounted, so screen readers announce each change (a region that appears with its text is often skipped). */}
+        <div className="sr-only" role="status" aria-live="polite">
+          {celebrate ? `New country: ${countries?.byCode[celebrate.code]?.name}.` : ''} {undo?.text ? `${undo.text}. Undo is available.` : ''}
+        </div>
 
         {/* Last in the tree so it sits above every screen: undo must be reachable wherever the change was made. */}
         <AnimatePresence>
           {undo && (
-            <motion.div className={adding || country || editing || settings || inbox || boarding ? 'undo low' : 'undo'} role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+            <motion.div className={adding || country || editing || settings || inbox || boarding ? 'undo low' : 'undo'} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
               <span>{undo.text}</span>
               <button className="text-button" onClick={undoLast}>Undo</button>
             </motion.div>
@@ -317,7 +344,7 @@ function Counter({ value, label }) {
 function Odometer({ value }) {
   const digits = String(value).split('');
   return (
-    <span className="counter-value odo" aria-label={String(value)}>
+    <span className="counter-value odo" role="img" aria-label={String(value)}>
       {digits.map((d, i) => (
         <span key={digits.length - i} className="odo-col" aria-hidden="true">
           <motion.span className="odo-strip" initial={false} animate={{ y: `${-d * 10}%` }} transition={{ type: 'spring', stiffness: 140, damping: 22 }}>

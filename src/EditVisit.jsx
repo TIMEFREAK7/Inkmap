@@ -14,7 +14,7 @@ export default function EditVisit({ visit, where, onSave, onDelete, onClose }) {
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
       {drag.handle}
       <div className="confirm">
-        <button className="text-button back" onClick={onClose}>‹ Back</button>
+        <button className="text-button back" onClick={onClose}><span aria-hidden="true">‹ </span>Back</button>
         <h2 className="confirm-name">{visit.name}</h2>
         <p className="result-where">{where}</p>
         <DateFields from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t); }} />

@@ -126,14 +126,14 @@ export default function BoardingScan({ onCode, onClose }) {
       </div>
       {done ? (
         <div className="inbox-empty">
-          <p>{done}</p>
+          <p role="status">{done}</p>
           <button className="secondary" onClick={() => { setError(''); busy.current = false; setDone(null); }}>Scan another</button>
           <button className="primary" onClick={onClose}>Check the places</button>
         </div>
       ) : (
         <>
           <div className="viewfinder"><video ref={video} muted playsInline /></div>
-          <p className="hint">{status}</p>
+          <p className="hint" aria-live="polite">{status}</p>
           {error && <p className="warn" role="alert">{error}</p>}
           <p className="hint">Only the airports, flight and date are kept. Your name and booking reference are not saved.</p>
           <button className="primary" onClick={() => fileRef.current.click()}>Use a screenshot, photo or PDF</button>

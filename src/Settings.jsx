@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
 import { BackupFolder } from './native.js';
 import { hasBackupFolder, backupNow, scheduleBackup } from './backup.js';
-import { COLOURS } from './Onboarding.jsx';
+import { COLOURS, COLOUR_NAMES } from './Onboarding.jsx';
 import { THEMES } from './theme.js';
 import { loadBoundarySources } from './data.js';
 import { db } from './db.js';
@@ -47,14 +47,14 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
           </div>
           <label className="field compact">
             Name
-            <input value={name} maxLength={40} onChange={e => setName(e.target.value)}
+            <input value={name} maxLength={40} autoComplete="given-name" enterKeyHint="done" onChange={e => setName(e.target.value)}
               onBlur={() => name.trim() && name.trim() !== profile.name && onSaveProfile({ name: name.trim() })} />
           </label>
-          <fieldset className="field colours compact">
+          <fieldset className="field colours compact" role="radiogroup">
             <legend>Your colour on the map</legend>
             {COLOURS.map(c => (
               <button key={c} className={c === profile.colour ? 'swatch picked' : 'swatch'} style={{ background: c }}
-                aria-label={`Colour ${c}`} aria-pressed={c === profile.colour} onClick={() => onSaveProfile({ colour: c })} />
+                role="radio" aria-label={COLOUR_NAMES[c]} aria-checked={c === profile.colour} onClick={() => onSaveProfile({ colour: c })} />
             ))}
           </fieldset>
           <p className="label">Your friend ID</p>
@@ -88,7 +88,7 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
         </section>
 
         <section className="card">
-          <p className="label">Find places you've been</p>
+          <p className="label">Find places I've been</p>
           <p className="hint">From where and when your photos were taken, or from your Google Maps Timeline. You check each one before it's added.</p>
           {home && (
             <p>Home town: <b>{home.name}</b>. Photos taken around it are skipped.{' '}

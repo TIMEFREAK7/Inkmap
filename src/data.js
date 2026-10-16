@@ -44,7 +44,8 @@ export function startPlaces() {
     worker.postMessage({ ...msg, id });
   });
   worker.onmessage = ({ data }) => {
-    pending.get(data.id)?.resolve(data);
+    const p = pending.get(data.id);
+    if (data.error) p?.reject(new Error(data.error)); else p?.resolve(data);
     pending.delete(data.id);
   };
   worker.onerror = e => {

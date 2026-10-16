@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { writeBackup, BACKUP, PREV } from '../src/backup.js';
+import { writeBackup, otherOwner, BACKUP, PREV } from '../src/backup.js';
 
 function memoryFs() {
   const files = new Map();
@@ -39,4 +39,14 @@ describe('automatic backup file rotation', () => {
     await expect(writeBackup(fs, 'v3')).rejects.toThrow('killed');
     expect(fs.files.get(PREV)).toBe('v2'); // restore falls back to .prev
   });
+});
+
+describe('backup folder owner check', () => {
+  const me = { profile: [{ friendId: 'AB12', createdAt: 1 }] };
+  it('lets this install overwrite its own backup', () => expect(otherOwner(me, me)).toBe(false));
+  it('refuses another person or another install', () => {
+    expect(otherOwner({ profile: [{ friendId: 'ZZ99', createdAt: 1 }] }, me)).toBe(true);
+    expect(otherOwner({ profile: [{ friendId: 'AB12', createdAt: 2 }] }, me)).toBe(true);
+  });
+  it('allows writing to an empty folder', () => expect(otherOwner(null, me)).toBe(false));
 });

@@ -7,7 +7,7 @@ import DateFields from './DateFields.jsx';
 
 // Search-first logging: type, pick, save. The date defaults to today.
 export default function AddVisit({ places, countries, recent, onSave, onClose, onFind }) {
-  const drag = useSheetDrag(onClose);
+  const drag = useSheetDrag(onClose, { autoFocus: false });
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [picked, setPicked] = useState(null);
@@ -35,14 +35,14 @@ export default function AddVisit({ places, countries, recent, onSave, onClose, o
       {!picked ? (
         <>
           <div className="search-row">
-            <input ref={input} className="search" type="search" enterKeyHint="search" placeholder="Search a city or town" aria-label="Search a city or town"
+            <input ref={input} className="search" type="search" enterKeyHint="search" placeholder="Search a city or town"
               aria-label="Search a city or town" value={query} onChange={e => setQuery(e.target.value)} />
             <button className="text-button" onClick={onClose}>Cancel</button>
           </div>
           {!places && <p className="hint">Getting places ready…</p>}
           {!query.trim() && (
             <button className="find-row" onClick={onFind}>
-              <span className="result-name">Find places you've been</span>
+              <span className="result-name">Find places I've been</span>
               <span className="result-where">From your photos, boarding passes, calendar or Google Maps Timeline</span>
             </button>
           )}
@@ -61,7 +61,7 @@ export default function AddVisit({ places, countries, recent, onSave, onClose, o
         </>
       ) : (
         <div className="confirm">
-          <button className="text-button back" onClick={() => setPicked(null)}>‹ Back</button>
+          <button className="text-button back" onClick={() => setPicked(null)}><span aria-hidden="true">‹ </span>Back</button>
           <h2 className="confirm-name">{picked.name}</h2>
           <p className="result-where">{label(picked)}</p>
           <DateFields from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t); }} />

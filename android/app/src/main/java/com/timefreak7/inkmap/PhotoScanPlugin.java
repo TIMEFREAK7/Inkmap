@@ -109,8 +109,8 @@ public class PhotoScanPlugin extends Plugin {
                     located++;
                     points.put(pt);
                 }
-            } catch (SecurityException e) {
-                call.reject("No permission to read photos: " + e.getMessage());
+            } catch (Exception e) { // permission revoked, or a storage volume removed mid-scan: never crash the app
+                call.reject("Could not read photos: " + e.getMessage());
                 return;
             }
         }

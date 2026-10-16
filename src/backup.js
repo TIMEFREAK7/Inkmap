@@ -36,16 +36,47 @@ let timer = null;
 let listener = () => {};
 export const onBackupResult = fn => { listener = fn; };
 
+// A backup in the folder that belongs to someone else, or to another install of this person (a profile is
+// created once per install; restoring a backup brings its profile, so a restored phone counts as the same install).
+// Overwriting it would silently destroy that backup, e.g. after tapping Start instead of Restore on a new phone.
+export class FolderConflict extends Error {
+  constructor(found) {
+    const p = found.profile[0];
+    super(`That folder already has ${p?.name ? `${p.name}'s` : 'another'} backup (${found.visits.length} places). Inkmap won't overwrite it: restore it, or choose another folder.`);
+    this.found = found;
+  }
+}
+
+async function conflictWith(data) {
+  let old;
+  try { old = await readFolderBackup(); } catch (e) {
+    if (e instanceof NewerBackupError) throw e; // made by a newer app: never overwrite with an older format
+    return null; // damaged beyond reading: replacing it is the right thing
+  }
+  return otherOwner(old, data) ? old : null;
+}
+
+export function otherOwner(old, data) {
+  const [a, b] = [old?.profile[0], data.profile[0]];
+  return !!(a && b && (a.friendId !== b.friendId || a.createdAt !== b.createdAt));
+}
+
+// Returns { ok, at } or { ok: false, error, conflict? } (also sent to the listener for the Settings and home warnings).
 export async function backupNow() {
   clearTimeout(timer);
   timer = null;
+  let result;
   try {
     const data = await buildBackup(db);
+    const other = await conflictWith(data);
+    if (other) throw new FolderConflict(other);
     await writeBackup(folderFs, JSON.stringify(data));
-    listener({ ok: true, at: data.exportedAt });
+    result = { ok: true, at: data.exportedAt };
   } catch (e) {
-    listener({ ok: false, error: e.message || String(e) });
+    result = { ok: false, error: e.message || String(e), conflict: e.found };
   }
+  listener(result);
+  return result;
 }
 
 // Call after every change. Writes 5 s after the last one, so a burst of edits is one write.
