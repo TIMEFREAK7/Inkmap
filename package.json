@@ -63,7 +63,8 @@
     },
     "files": [
       "dist/**",
-      "electron/**"
+      "electron/**",
+      "!node_modules/**"
     ],
     "icon": "build/icon.png",
     "win": {
