@@ -19,7 +19,7 @@ import { Widget } from './native.js';
 import { closeTopDialog } from './sheet.jsx';
 import Inbox from './Inbox.jsx';
 import BoardingScan from './BoardingScan.jsx';
-import { findPhotoTrips, importTimeline, importBoardingPass, importCalendar } from './photos.js';
+import { findPhotoTrips, importTimeline, importBoardingPass, importCalendar, importSheet } from './photos.js';
 import { km, HOME_KM } from './backfill.js';
 import { scheduleBackup, onBackupResult } from './backup.js';
 import { loadCountries, startPlaces } from './data.js';
@@ -136,17 +136,19 @@ export default function App() {
     reloadSuggestions();
   }
 
-  async function timelineImport(files) {
+  async function fileImport(label, work) {
     if (notReady()) return;
-    setScan({ running: true, label: 'Reading your Timeline', done: 0, total: 0 });
+    setScan({ running: true, label, done: 0, total: 0 });
     try {
-      setScan(await importTimeline(places, countries, files));
+      setScan(await work());
       scheduleBackup();
     } catch (e) {
       setScan({ error: e.message });
     }
     reloadSuggestions();
   }
+  const timelineImport = files => fileImport('Reading your Timeline', () => importTimeline(places, countries, files));
+  const sheetImport = file => fileImport('Reading your trip list', () => importSheet(places, countries, file));
 
   // A boarding pass returns { found, legs }; the scanner shows what was read.
   async function boardingPassCode(text) {
@@ -315,7 +317,7 @@ export default function App() {
             onEdit={setEditing} onClose={() => setCountry(null)} />}
           {postcard && <Postcard snapRef={snapRef} profile={profile} s={s} visits={visits} onClose={() => setPostcard(false)} />}
           {editing && <EditVisit key={editing.id} visit={editing} where={where(editing)} onSave={saveEdit} onDelete={deleteVisit} onClose={() => setEditing(null)} />}
-          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport} onCalendar={calendarImport}
+          {inbox && <Inbox suggestions={suggestions} scan={scan} where={where} onScan={scanPhotos} onTimeline={timelineImport} onSheet={sheetImport} onCalendar={calendarImport}
             onConfirm={confirmSuggestion} onReject={rejectSuggestion} onHome={setHome} onBoarding={() => setBoarding(true)} onClose={() => setInbox(false)} />}
           {boarding && <BoardingScan onCode={boardingPassCode} onClose={() => setBoarding(false)} />}
           {settings && <Settings profile={profile} backup={backup} onSaveProfile={saveProfile} onClose={() => setSettings(false)}

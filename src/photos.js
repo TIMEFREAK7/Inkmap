@@ -11,6 +11,7 @@ import { today } from './dates.js';
 import { parseTimeline } from './timeline.js';
 import { eventQuery, eventDays, placeFromText } from './calendar.js';
 import { norm } from './search.js';
+import { readSheet, sheetTrips, countryNames } from './spreadsheet.js';
 
 // Android scans the whole library (the photo picker strips location); elsewhere the person picks files.
 export const scansLibrary = Capacitor.isNativePlatform();
@@ -65,7 +66,7 @@ export async function importTimeline(places, countries, files) {
 // Android: events in the phone's calendar with a place, and flights. Same trip rules as photos.
 export async function importCalendar(places, countries) {
   const { events } = await Calendar.events();
-  const countryCodes = Object.fromEntries(countries.list.map(c => [norm(c.name), c.code]));
+  const countryCodes = countryNames(countries);
   const found = new Map(); // lookups repeat a lot (the same office, the same hotel): each text is resolved once
   const points = [];
   for (const e of events) {
@@ -79,6 +80,38 @@ export async function importCalendar(places, countries) {
     if (p) for (const day of eventDays(e)) points.push({ lat: p.lat, lon: p.lon, day });
   }
   return { calendarEvents: events.length, found: await addSuggestions(places, countries, points, 'calendar') };
+}
+
+// An Excel or CSV trip list: each place name looked up like a calendar location, then the same trip rules as photos.
+export async function importSheet(places, countries, file) {
+  const { sheets, date1904 } = await readSheet(file);
+  const countryCodes = countryNames(countries);
+  const trips = [];
+  let undated = 0;
+  for (const rows of sheets) {
+    const r = sheetTrips(rows, countryCodes, date1904);
+    for (const t of r.trips) trips.push(t);
+    undated += r.undated;
+  }
+  if (!trips.length) {
+    throw new Error(undated ? `Found ${undated} rows with places, but no dates Inkmap could read. Each trip needs a date, like 12/03/2015, March 2015 or 2015.`
+      : "Couldn't find trips in this file. It needs a column with the place (a city) and a column with the date.");
+  }
+  const found = new Map(), missed = new Set(), countryOnly = new Set(), points = [];
+  for (const t of trips) {
+    const country = [t.country, ...t.parts].find(p => countryCodes[norm(p)]) ?? '';
+    const names = t.parts.filter(p => !countryCodes[norm(p)]);
+    if (!names.length) { countryOnly.add(country); continue; } // no city to put on the map
+    for (const name of names) {
+      const key = `${norm(name)}|${norm(country)}`;
+      if (!found.has(key)) found.set(key, await placeFromText(country ? `${name}, ${country}` : name, places.search, countryCodes));
+      const p = found.get(key);
+      if (p) for (const day of t.days) points.push({ lat: p.lat, lon: p.lon, day });
+      else missed.add(name);
+    }
+  }
+  return { sheetRows: trips.length, undated, missed: [...missed], countryOnly: [...countryOnly],
+    found: await addSuggestions(places, countries, points, 'sheet') };
 }
 
 // A scanned boarding pass: one suggestion per flight, at the city its destination airport serves (not home).

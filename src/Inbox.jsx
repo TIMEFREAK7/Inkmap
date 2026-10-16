@@ -7,15 +7,17 @@ import { flagUrl } from './flags.js';
 import { scansLibrary } from './photos.js';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const few = names => (names.length > 12 ? `${names.slice(0, 12).join(', ')} and ${names.length - 12} more` : names.join(', '));
 
 // Suggestions inbox: one card at a time. Swipe right (or tap Yes) to add it as a visit, left (or Not me) to drop it.
-export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onCalendar, onBoarding, onConfirm: confirm, onReject, onHome, onClose }) {
+export default function Inbox({ suggestions, scan, where, onScan, onTimeline, onSheet, onCalendar, onBoarding, onConfirm: confirm, onReject, onHome, onClose }) {
   const [asking, setAsking] = useState(null); // boarding pass suggestion waiting for "Did you leave the airport?"
   // A boarding pass alone doesn't show the person left the airport, so confirming asks.
   const onConfirm = s => (s.source === 'boardingPass' ? setAsking(s) : confirm(s));
   const drag = useSheetDrag(onClose);
   const fileRef = useRef(null);
   const timelineRef = useRef(null);
+  const sheetRef = useRef(null);
   const [top, next] = suggestions;
   const [round, setRound] = useState(0); // bumped to bring a swiped-away card back when the airport question is cancelled
 
@@ -46,6 +48,16 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
       )}
       {scan?.timelineVisits != null && (
         <p className="hint scan-summary" role="status">Read {plural(scan.timelineVisits, 'Timeline visit', 'Timeline visits')}{' · '}{plural(scan.found, 'new place', 'new places')}</p>
+      )}
+      {scan?.sheetRows != null && (
+        <div className="scan-summary" role="status">
+          <p className="hint">
+            Read {plural(scan.sheetRows, 'trip', 'trips')}{' · '}{plural(scan.found, 'new place', 'new places')}
+            {scan.undated > 0 && ` · ${plural(scan.undated, 'row', 'rows')} without a date skipped`}
+          </p>
+          {scan.missed.length > 0 && <p className="hint">Not found, add these by hand: {few(scan.missed)}</p>}
+          {scan.countryOnly.length > 0 && <p className="hint">Only a country, no city, add a city by hand: {few(scan.countryOnly)}</p>}
+        </div>
       )}
       {scan?.photos != null && (
         <p className="hint scan-summary" role="status">
@@ -94,6 +106,8 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
             <button className="secondary" onClick={onBoarding}>Scan a boarding pass</button>
             <p className="hint">Export it from phone Settings → Location → Location services → Timeline, then pick Timeline.json.</p>
             <button className="secondary" onClick={() => timelineRef.current.click()}>Import Google Maps Timeline</button>
+            <p className="hint">A trip list kept in Excel or as a CSV file: a place and a date on each row, in any order.</p>
+            <button className="secondary" onClick={() => sheetRef.current.click()}>Import an Excel trip list</button>
           </div>
           <button className="primary" onClick={start}>{scansLibrary ? 'Look through my photos' : 'Choose photos'}</button>
         </div>
@@ -104,6 +118,9 @@ export default function Inbox({ suggestions, scan, where, onScan, onTimeline, on
       )}
       <input ref={timelineRef} type="file" accept=".json,application/json" multiple hidden
         onChange={e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) onTimeline(files); }} />
+      <input ref={sheetRef} type="file" hidden
+        accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        onChange={e => { const f = e.target.files[0]; e.target.value = ''; if (f) onSheet(f); }} />
       <input ref={fileRef} type="file" accept="image/*" multiple hidden
         onChange={e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) onScan(files); }} />
     </motion.div>
@@ -147,7 +164,7 @@ function Card({ s, where, behind, onConfirm, onReject }) {
       <p className="suggestion-name">{s.name}</p>
       <p className="result-where">{where}</p>
       <p className="suggestion-date">{describeDates(s)}</p>
-      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline' : s.source === 'calendar' ? 'From your calendar'
+      <p className="hint">{s.source === 'timeline' ? 'From Google Maps Timeline' : s.source === 'calendar' ? 'From your calendar' : s.source === 'sheet' ? 'From your trip list'
         : s.flight ? `Flight ${s.flight.carrier} ${s.flight.number} · ${s.flight.from} → ${s.flight.to}` : plural(s.photos, 'photo', 'photos')}</p>
     </motion.div>
   );
