@@ -483,3 +483,12 @@ details summary { list-style: none; padding-left: 0; display: flex; align-items:
 .postcard { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px 0; }
 .postcard img { max-width: 100%; max-height: 100%; border-radius: var(--r-l); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
 .postcard-button { width: 100%; margin-top: 12px; }
+.map-missing { margin: 0; padding: 24px; text-align: center; color: var(--on-surface-variant); }
+.globe .map-missing { position: absolute; top: 40%; left: 0; right: 0; }
+
+/* Laptop and desktop windows: screens and sheets keep a readable column in the middle, the globe fills the rest. */
+@media (min-width: 720px) {
+  .sheet, .screen, .onboarding { max-width: 600px; margin: 0 auto; }
+  .sheet, .onboarding { box-shadow: 0 0 60px rgba(0, 0, 0, 0.5); }
+  .counters { max-width: 520px; margin: 0 auto; }
+}

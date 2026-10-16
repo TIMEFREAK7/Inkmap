@@ -11,7 +11,7 @@
     "data": "node data-pipeline/build.mjs",
     "data:fetch": "bash data-pipeline/fetch.sh",
     "electron:dev": "INKMAP_DEV_URL=http://localhost:5173 electron .",
-    "dist:win": "vite build && electron-builder --win --publish never"
+    "dist:win": "scripts/build-exe.sh"
   },
   "repository": {
     "type": "git",
@@ -72,7 +72,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": false
+      "perMachine": false,
+      "artifactName": "Inkmap-Setup-${version}.${ext}"
     }
   }
 }

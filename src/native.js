@@ -2,7 +2,10 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 // Android-only plugins in android/app/src/main/java/com/timefreak7/inkmap.
 export const PhotoScan = registerPlugin('PhotoScan');
-export const BackupFolder = registerPlugin('BackupFolder');
+// Windows (Electron) gives the same calls through its preload script; Android through the plugin.
+export const isDesktop = typeof window !== 'undefined' && !!window.inkmapBackupFolder;
+export const BackupFolder = isDesktop ? window.inkmapBackupFolder : registerPlugin('BackupFolder');
+export const device = isDesktop ? 'computer' : 'phone';
 export const FileShare = registerPlugin('FileShare');
 export const Calendar = registerPlugin('Calendar');
 export const Widget = registerPlugin('Widget');

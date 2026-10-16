@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
-import { BackupFolder } from './native.js';
+import { BackupFolder, device } from './native.js';
 import { hasBackupFolder, backupNow, scheduleBackup, markAllPhotosPending } from './backup.js';
 import { COLOURS, COLOUR_NAMES } from './Onboarding.jsx';
 import { THEMES } from './theme.js';
@@ -72,7 +72,7 @@ export default function Settings({ profile, backup, onSaveProfile, onClose, onPh
             {backup && !backup.ok && <p className="warn" role="alert">The last backup failed: {backup.error}</p>}
             <button className="secondary" onClick={changeFolder}>{folder ? 'Change folder' : 'Choose folder'}</button>
             {folder && <button className="secondary" onClick={backupNow}>Back up now</button>}
-            <p className="hint">If this phone is lost or reset, the backup folder goes with it. Now and then, copy the file inkmap-backup.inkbackup from that folder to Google Drive or another device.</p>
+            <p className="hint">If this {device} is lost or reset, the backup folder goes with it. Now and then, copy the file inkmap-backup.inkbackup from that folder to Google Drive or another device.</p>
           </section>
         )}
 

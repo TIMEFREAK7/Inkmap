@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl';
+import { setWorkerUrl } from 'maplibre-gl';
+import { newMap } from './map.js';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { nightAlpha, sunLight, cityLights, sunScreenDirection, MERCATOR_LAT } from './sun.js';
@@ -141,7 +142,7 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
   useEffect(() => {
     const nightCanvas = Object.assign(document.createElement('canvas'), { width: NIGHT_SIZE, height: NIGHT_SIZE });
     drawNight(nightCanvas, new Date());
-    const map = new MapLibreMap({
+    const map = newMap({
       // Launch: start turned a quarter away from where the person last looked, then turn to face it.
       container: el.current, style: style(geo, visited, colour, nightCanvas), center: [(start?.[0] ?? 78) + 90, start?.[1] ?? 20], zoom: 1.6,
       attributionControl: false, renderWorldCopies: false,
@@ -152,6 +153,7 @@ export default function Globe({ geo, visited, colour, focus, paused, onCountry, 
       // Lighter flick than MapLibre's default (stops within ~0.5 s): faster release speed, longer glide.
       dragPan: { maxSpeed: 4000, deceleration: 1200 },
     });
+    if (!map) { el.current.classList.add('ready'); return; }
 
     // Idle spin: move the camera a little each frame. Not via chained easeTo: starting an ease from inside the
     // moveend of the one ending left MapLibre running an orphaned frame callback ("_onEaseFrame is not a function").

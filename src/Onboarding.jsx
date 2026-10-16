@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { db } from './db.js';
 import { newFriendId, parseFriendId } from './friendId.js';
-import { BackupFolder } from './native.js';
+import { BackupFolder, device } from './native.js';
 import { hasBackupFolder, backupNow, readFolderBackup, restorePhotos } from './backup.js';
 import { restoreBackup, summarise } from './backupFile.js';
 
@@ -63,7 +63,7 @@ export default function Onboarding({ onDone }) {
       <Screen>
         <img className="logo" src="./icon-192.png" alt="" width="96" height="96" />
         <h1 className="title">Inkmap</h1>
-        <p className="lead">Your map of every place you've been. Everything stays on this phone.</p>
+        <p className="lead">Your map of every place you've been. Everything stays on this {device}.</p>
         <div className="actions">
           <button className="primary" onClick={() => setStep('fresh')}>Start</button>
           {hasBackupFolder && <button className="secondary" onClick={() => setStep('restore')}>Restore from a backup</button>}
@@ -92,7 +92,7 @@ export default function Onboarding({ onDone }) {
               <li>Saved {new Date(s.exportedAt).toLocaleString()}</li>
               {s.friendId && <li>Friend ID {s.friendId}</li>}
             </ul>
-            <p className="lead">Restoring replaces everything in Inkmap on this phone with this backup.</p>
+            <p className="lead">Restoring replaces everything in Inkmap on this {device} with this backup.</p>
             <div className="actions">
               <button className="primary" onClick={restore}>Restore this backup</button>
               {clash

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBackHandler } from './sheet.jsx';
-import { Map as MapLibreMap } from 'maplibre-gl';
+import { newMap } from './map.js';
 import { cssVar } from './theme.js';
 import { AnimatePresence, motion } from 'motion/react';
 import { db } from './db.js';
-import { shareFile } from './native.js';
+import { shareFile, device } from './native.js';
 import { scheduleBackup } from './backup.js';
 import { buildShare, parseShare, decideImport, applyImport } from './share.js';
 
@@ -112,7 +112,7 @@ export default function Family({ profile, visits, family, countries, onChanged }
       )}
       {removing && (
         <Dialog title={`Remove ${removing.name}?`}
-          text="Their map is deleted from this phone. You can add them again from a new file."
+          text={`Their map is deleted from this ${device}. You can add them again from a new file.`}
           confirm="Remove" danger onConfirm={remove} onCancel={() => setRemoving(null)} />
       )}
     </div>
@@ -137,7 +137,7 @@ function Dialog({ title, text, confirm, danger, onConfirm, onCancel }) {
 function FamilyMap({ geo, people }) {
   const el = useRef(null);
   useEffect(() => {
-    const map = new MapLibreMap({
+    const map = newMap({
       container: el.current, attributionControl: false, bounds: [[-170, -58], [180, 78]],
       pixelRatio: Math.min(devicePixelRatio, 2), canvasContextAttributes: { antialias: true }, renderWorldCopies: false,
       style: {
@@ -154,6 +154,7 @@ function FamilyMap({ geo, people }) {
         ],
       },
     });
+    if (!map) return;
     // Overlapping countries blend, so a place two people share reads as both colours.
     map.once('load', () => people.forEach((p, i) => map.setPaintProperty(`p${i}`, 'fill-opacity', 0.6)));
     return () => map.remove();

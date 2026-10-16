@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { BackupFolder } from './native.js';
+import { BackupFolder, isDesktop } from './native.js';
 import { db } from './db.js';
 import { buildBackup, parseBackup, NewerBackupError } from './backupFile.js';
 
@@ -31,7 +31,7 @@ export const folderFs = {
 
 // --- Automatic backup into the chosen folder (Android) ---
 
-export const hasBackupFolder = Capacitor.isNativePlatform(); // shortcut: Windows/web backup arrives with their builds
+export const hasBackupFolder = Capacitor.isNativePlatform() || isDesktop; // shortcut: none in a plain browser (web build)
 
 const DEBOUNCE_MS = 5000;
 let timer = null;

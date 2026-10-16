@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Map as MapLibreMap } from 'maplibre-gl';
+import { newMap } from './map.js';
 import { cssVar } from './theme.js';
 import { motion } from 'motion/react';
 import { useSheetDrag } from './sheet.jsx';
@@ -27,7 +27,7 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
     if (!shape) return;
     let closed = false;
     const counted = mine.filter(v => v.exitedAirport);
-    const map = new MapLibreMap({
+    const map = newMap({
       container: el.current, attributionControl: false,
       bounds: fitBox(shape, mine.map(v => [v.lon, v.lat])), fitBoundsOptions: { padding: 32 },
       pixelRatio: Math.min(devicePixelRatio, 2), canvasContextAttributes: { antialias: true },
@@ -41,6 +41,7 @@ export default function CountryView({ code, countries, visits, colour, onEdit, o
         ],
       },
     });
+    if (!map) return;
     // States and districts arrive a moment later (this country's file, cached after the first open).
     loadRegions(code).then(regions => {
       if (closed || !regions) return;
